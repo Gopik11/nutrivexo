@@ -42,3 +42,4 @@ src/
 
 Warm earth-tone accent palette with muted green/amber/red score states. All user-facing copy lives in `src/constants/strings.ts`.
 "# nutrivexo" 
+"# nutrivexo" 
