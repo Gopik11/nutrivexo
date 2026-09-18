@@ -126,7 +126,63 @@ export const strings = {
   scan: {
     title: 'Scan a label',
     subtitle: 'Point your camera at the ingredient list. We will guide you to a clear capture.',
-    placeholder: 'Camera view will appear here in Phase 2',
+    modeCamera: 'Camera',
+    modeManual: 'Type it in',
+    productNameLabel: 'Product name (optional)',
+    productNamePlaceholder: 'e.g. Whole grain crackers',
+    ingredientsLabel: 'Ingredients (and nutrition facts, if you have them)',
+    ingredientsPlaceholder: 'Ingredients: Whole wheat flour, water, salt, yeast…',
+    analyze: 'Analyze',
+    cameraPermissionTitle: 'Camera access needed',
+    cameraPermissionBody:
+      'Nutrivexo needs your camera to scan ingredient labels. You can also type ingredients in manually instead.',
+    enableCamera: 'Enable camera',
+    openSettings: 'Open settings',
+    readingLabel: 'Reading label…',
+    ocrUnavailable:
+      'On-device text recognition isn’t available in this build. Try typing the ingredients instead.',
+    ocrFailed:
+      'We had trouble reading that photo. Try again with better lighting, or type the ingredients instead.',
+    noTextFound: 'We couldn’t find any ingredient text. Try again or type it in manually.',
+    tryAgain: 'Try again',
+    typeInstead: 'Type instead',
+  },
+
+  results: {
+    saveToHistory: 'Save to history',
+    savedToHistory: 'Saved to history',
+    backToScan: 'Back to Scan',
+    notFound: 'This scan is no longer available — it may have been deleted.',
+    recommendations: 'Recommendations',
+    whyThisScore: 'Why this score',
+    ingredientsRecognized: 'Ingredients recognized',
+    notInDatabase: 'Not in our database yet',
+    notInDatabaseBody:
+      'These terms weren’t recognized — they’re not necessarily concerning, we just don’t have data on them yet.',
+    disclaimer: 'General wellness information, not medical advice.',
+    delete: 'Delete',
+  },
+
+  settings: {
+    title: 'Settings',
+    notifications: 'Notifications',
+    notificationsEnabledDesc: 'Enabled for this device.',
+    notificationsDisabledDesc: 'Grant permission to receive scan and digest alerts.',
+    weeklyDigest: 'Weekly digest',
+    weeklyDigestDesc: 'A Monday morning summary of your scans and trends.',
+    highConcernAlerts: 'High-concern alerts',
+    highConcernAlertsDesc:
+      'Notify me right away when a saved scan matches one of my allergies.',
+  },
+
+  dataPrivacy: {
+    title: 'Data & privacy',
+    intro:
+      'Nutrivexo runs entirely on your device. Nothing you scan or enter is sent to a server — all analysis happens locally, and your data stays on this phone unless you delete the app.',
+    storedHeading: 'What’s stored on this device',
+    deleteHeading: 'Delete your data',
+    deleteBody: 'Permanently erase your health profile and scan history from this device.',
+    deleteButton: 'Delete all my data',
   },
 
   history: {

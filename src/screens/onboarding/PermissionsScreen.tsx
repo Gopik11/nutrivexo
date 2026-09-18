@@ -1,11 +1,13 @@
 import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useCameraPermissions } from 'expo-camera';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ScreenLayout } from '../../components/ScreenLayout';
 import { Button, Card } from '../../components/ui';
 import { strings } from '../../constants/strings';
 import type { OnboardingStackParamList } from '../../navigation/types';
 import { useAppStore } from '../../store/useAppStore';
+import { requestNotificationPermission, scheduleWeeklyDigest } from '../../services/notifications';
 
 type Props = NativeStackScreenProps<OnboardingStackParamList, 'Permissions'>;
 
@@ -58,6 +60,22 @@ export function PermissionsScreen({ navigation }: Props) {
   const setNotificationsPermissionGranted = useAppStore(
     (state) => state.setNotificationsPermissionGranted
   );
+  const updateSettings = useAppStore((state) => state.updateSettings);
+  const [, requestCameraPermission] = useCameraPermissions();
+
+  const handleEnableCamera = async () => {
+    const result = await requestCameraPermission();
+    setCameraPermissionGranted(result.granted);
+  };
+
+  const handleEnableNotifications = async () => {
+    const granted = await requestNotificationPermission();
+    setNotificationsPermissionGranted(granted);
+    if (granted) {
+      updateSettings({ notificationsEnabled: true, weeklyDigestEnabled: true });
+      await scheduleWeeklyDigest();
+    }
+  };
 
   return (
     <ScreenLayout
@@ -77,7 +95,7 @@ export function PermissionsScreen({ navigation }: Props) {
         description={strings.onboarding.permissions.camera.description}
         granted={cameraPermissionGranted}
         actionLabel={strings.onboarding.permissions.enableCamera}
-        onEnable={() => setCameraPermissionGranted(true)}
+        onEnable={handleEnableCamera}
       />
 
       <PermissionCard
@@ -86,7 +104,7 @@ export function PermissionsScreen({ navigation }: Props) {
         description={strings.onboarding.permissions.notifications.description}
         granted={notificationsPermissionGranted}
         actionLabel={strings.onboarding.permissions.enableNotifications}
-        onEnable={() => setNotificationsPermissionGranted(true)}
+        onEnable={handleEnableNotifications}
       />
 
       <Text className="text-body-sm text-neutral-500 text-center mt-2">

@@ -55,6 +55,12 @@ export interface Ingredient {
   concernLevel: ConcernLevel;
   concernReason?: string;
   commonAllergenSource?: string;
+  /**
+   * Ingredients like "natural flavors" or "spices" can hide allergens without
+   * naming them. When true, any user allergy triggers a low-confidence
+   * "may contain" caution rather than a "may contain <this allergen>" alert.
+   */
+  ambiguousAllergenRisk?: boolean;
 }
 
 export interface NutritionFacts {
@@ -109,4 +115,50 @@ export interface OnboardingHealthProfileDraft {
   medicalConditions: string[];
   dietaryPattern: string;
   healthGoals: string[];
+}
+
+/** A single ingredient matched from OCR/typed text, with its position in the source text. */
+export interface MatchedIngredient {
+  ingredient: Ingredient;
+  matchedText: string;
+  confidence: 'exact' | 'alias' | 'fuzzy';
+}
+
+/** Full output of running a scan's text + nutrition facts through the analysis engine. */
+export interface AnalysisResult {
+  product: Product;
+  score: number;
+  scoreLevel: 'good' | 'moderate' | 'alert';
+  alerts: AllergenAlert[];
+  recommendations: Recommendation[];
+  matchedIngredients: MatchedIngredient[];
+  unmatchedTerms: string[];
+  scoreFactors: ScoreFactor[];
+}
+
+export interface ScoreFactor {
+  label: string;
+  detail: string;
+  impact: 'positive' | 'negative' | 'neutral';
+  points: number;
+}
+
+/** A saved, persisted scan — the AnalysisResult plus identity/timestamp for history. */
+export interface SavedScan {
+  id: string;
+  scannedAt: string;
+  product: Product;
+  score: number;
+  scoreLevel: 'good' | 'moderate' | 'alert';
+  alerts: AllergenAlert[];
+  recommendations: Recommendation[];
+  matchedIngredientNames: string[];
+  unmatchedTerms: string[];
+  scoreFactors: ScoreFactor[];
+}
+
+export interface AppSettings {
+  notificationsEnabled: boolean;
+  weeklyDigestEnabled: boolean;
+  highConcernAlertsEnabled: boolean;
 }

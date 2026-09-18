@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { OnboardingHealthProfileDraft } from '../types';
+import type { AnalysisResult, AppSettings, OnboardingHealthProfileDraft, SavedScan } from '../types';
+import { generateId } from '../services/id';
 
 interface AppState {
   hasCompletedOnboarding: boolean;
@@ -9,6 +10,9 @@ interface AppState {
   cameraPermissionGranted: boolean;
   notificationsPermissionGranted: boolean;
   healthProfileDraft: OnboardingHealthProfileDraft;
+  savedScans: SavedScan[];
+  settings: AppSettings;
+
   setDisclaimerAccepted: (accepted: boolean) => void;
   setCameraPermissionGranted: (granted: boolean) => void;
   setNotificationsPermissionGranted: (granted: boolean) => void;
@@ -23,6 +27,12 @@ interface AppState {
   setDietaryPattern: (pattern: string) => void;
   completeOnboarding: () => void;
   resetOnboarding: () => void;
+
+  saveScan: (analysis: AnalysisResult) => SavedScan;
+  deleteScan: (id: string) => void;
+  clearHistory: () => void;
+  updateSettings: (patch: Partial<AppSettings>) => void;
+  clearAllData: () => void;
 }
 
 const defaultHealthProfileDraft: OnboardingHealthProfileDraft = {
@@ -32,6 +42,27 @@ const defaultHealthProfileDraft: OnboardingHealthProfileDraft = {
   healthGoals: [],
 };
 
+const defaultSettings: AppSettings = {
+  notificationsEnabled: false,
+  weeklyDigestEnabled: false,
+  highConcernAlertsEnabled: true,
+};
+
+function toSavedScan(analysis: AnalysisResult): SavedScan {
+  return {
+    id: generateId('savedscan'),
+    scannedAt: new Date().toISOString(),
+    product: analysis.product,
+    score: analysis.score,
+    scoreLevel: analysis.scoreLevel,
+    alerts: analysis.alerts,
+    recommendations: analysis.recommendations,
+    matchedIngredientNames: analysis.matchedIngredients.map((m) => m.ingredient.name),
+    unmatchedTerms: analysis.unmatchedTerms,
+    scoreFactors: analysis.scoreFactors,
+  };
+}
+
 export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
@@ -40,6 +71,8 @@ export const useAppStore = create<AppState>()(
       cameraPermissionGranted: false,
       notificationsPermissionGranted: false,
       healthProfileDraft: defaultHealthProfileDraft,
+      savedScans: [],
+      settings: defaultSettings,
 
       setDisclaimerAccepted: (accepted) => set({ disclaimerAccepted: accepted }),
 
@@ -74,6 +107,25 @@ export const useAppStore = create<AppState>()(
           notificationsPermissionGranted: false,
           healthProfileDraft: defaultHealthProfileDraft,
         }),
+
+      saveScan: (analysis) => {
+        const savedScan = toSavedScan(analysis);
+        set({ savedScans: [savedScan, ...get().savedScans] });
+        return savedScan;
+      },
+
+      deleteScan: (id) => set({ savedScans: get().savedScans.filter((scan) => scan.id !== id) }),
+
+      clearHistory: () => set({ savedScans: [] }),
+
+      updateSettings: (patch) => set({ settings: { ...get().settings, ...patch } }),
+
+      clearAllData: () =>
+        set({
+          savedScans: [],
+          healthProfileDraft: defaultHealthProfileDraft,
+          settings: defaultSettings,
+        }),
     }),
     {
       name: 'nutrivexo-app-store',
@@ -81,6 +133,8 @@ export const useAppStore = create<AppState>()(
       partialize: (state) => ({
         hasCompletedOnboarding: state.hasCompletedOnboarding,
         healthProfileDraft: state.healthProfileDraft,
+        savedScans: state.savedScans,
+        settings: state.settings,
       }),
     }
   )

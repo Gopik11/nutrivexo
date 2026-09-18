@@ -10,7 +10,10 @@
       "backgroundColor": "#FAF8F5"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Nutrivexo uses your camera to scan ingredient labels."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -23,6 +26,15 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Nutrivexo uses your camera to scan ingredient labels."
+        }
+      ],
+      "expo-notifications"
+    ]
   }
 }
