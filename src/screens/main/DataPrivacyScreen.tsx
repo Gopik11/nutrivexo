@@ -27,7 +27,7 @@ const dataPoints = [
   {
     icon: 'barcode-outline' as const,
     title: 'Barcode lookups',
-    body: 'Scanning a barcode sends only that number to Open Food Facts, an independent open database, to fetch the product’s name and ingredients. Nothing else about you is sent.',
+    body: 'Scanning a barcode sends only that number to Open Food Facts (or, in Cosmetics mode, Open Beauty Facts) — independent open databases — to fetch the product’s name and ingredients. Nothing else about you is sent.',
   },
 ];
 

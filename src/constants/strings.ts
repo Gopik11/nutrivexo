@@ -129,6 +129,8 @@ export const strings = {
   scan: {
     title: 'Scan a label',
     subtitle: 'Point your camera at the ingredient list. We will guide you to a clear capture.',
+    domainFood: 'Food',
+    domainCosmetics: 'Cosmetics',
     modeCamera: 'Camera',
     modeBarcode: 'Barcode',
     modeManual: 'Type it in',
@@ -136,6 +138,8 @@ export const strings = {
     productNamePlaceholder: 'e.g. Whole grain crackers',
     ingredientsLabel: 'Ingredients (and nutrition facts, if you have them)',
     ingredientsPlaceholder: 'Ingredients: Whole wheat flour, water, salt, yeast…',
+    ingredientsLabelCosmetics: 'Ingredients',
+    ingredientsPlaceholderCosmetics: 'Ingredients: Aqua, Glycerin, Parfum, Sodium Lauryl Sulfate…',
     analyze: 'Analyze',
     cameraPermissionTitle: 'Camera access needed',
     cameraPermissionBody:
@@ -154,6 +158,8 @@ export const strings = {
     barcodeLookingUp: 'Looking up product…',
     barcodeNotFound:
       'We couldn’t find this product in the Open Food Facts database. Try the camera or type it in instead.',
+    barcodeNotFoundCosmetics:
+      'We couldn’t find this product in the Open Beauty Facts database. Try the camera or type it in instead.',
     barcodeLookupFailed:
       'We couldn’t reach the product database — check your connection and try again, or type the ingredients in instead.',
     barcodeNoIngredients:
@@ -180,6 +186,7 @@ export const strings = {
     betterAlternativesLoading: 'Looking for better alternatives…',
     betterAlternativesSubtitle: 'Other products in this category that score higher for you, from Open Food Facts.',
     reportIncorrectInfo: 'Something look wrong? Report it on Open Food Facts →',
+    reportIncorrectInfoCosmetics: 'Something look wrong? Report it on Open Beauty Facts →',
   },
 
   settings: {

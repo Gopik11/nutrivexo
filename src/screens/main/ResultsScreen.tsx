@@ -85,7 +85,14 @@ export function ResultsScreen({ route, navigation }: Props) {
   }, [isFromHistory, historyScan, params]);
 
   useEffect(() => {
-    if (!view || view.product.source !== 'barcode' || !view.product.category) {
+    // Swap suggestions currently only cover food (they search Open Food Facts by
+    // category) — cosmetics swap suggestions are future work.
+    if (
+      !view ||
+      view.product.source !== 'barcode' ||
+      !view.product.category ||
+      (view.product.domain ?? 'food') !== 'food'
+    ) {
       setSwapCandidates([]);
       return;
     }
@@ -308,12 +315,16 @@ export function ResultsScreen({ route, navigation }: Props) {
             accessibilityLabel="Report incorrect product info"
             onPress={() =>
               Linking.openURL(
-                `https://world.openfoodfacts.org/product/${view.product.barcode}`
+                view.product.domain === 'cosmetics'
+                  ? `https://world.openbeautyfacts.org/product/${view.product.barcode}`
+                  : `https://world.openfoodfacts.org/product/${view.product.barcode}`
               )
             }
             className="text-caption text-accent-600 text-center mt-3"
           >
-            {strings.results.reportIncorrectInfo}
+            {view.product.domain === 'cosmetics'
+              ? strings.results.reportIncorrectInfoCosmetics
+              : strings.results.reportIncorrectInfo}
           </Text>
         )}
 

@@ -328,7 +328,10 @@ function buildNutritionFactors(
   return factors;
 }
 
-function buildIngredientFactors(matchedIngredients: MatchedIngredient[]): ScoreFactor[] {
+function buildIngredientFactors(
+  matchedIngredients: MatchedIngredient[],
+  region: Region = 'US'
+): ScoreFactor[] {
   const byLevel: Record<Exclude<ConcernLevel, 'none'>, MatchedIngredient[]> = {
     high: [],
     moderate: [],
@@ -381,6 +384,40 @@ function buildIngredientFactors(matchedIngredients: MatchedIngredient[]): ScoreF
       detail: `${processedCount} ingredients associated with heavy processing (artificial colors, sweeteners, or processing aids).`,
       impact: 'negative',
       points: -6,
+    });
+  }
+
+  // Cosmetics-only: ingredients banned/heavily restricted in the EU (parabens,
+  // phthalates, formaldehyde-releasers, etc.) only count against the score
+  // when EU is the active region — the same ingredient is legally sold in the
+  // US, so a US-region scan shouldn't penalize it beyond its base concernLevel.
+  if (region === 'EU') {
+    const restricted = matchedIngredients.filter((m) => m.ingredient.bannedInEU);
+    if (restricted.length > 0) {
+      const names = restricted.slice(0, 3).map((m) => m.ingredient.name);
+      const suffix = restricted.length > 3 ? `, +${restricted.length - 3} more` : '';
+      factors.push({
+        label: `${restricted.length} ingredient${restricted.length > 1 ? 's' : ''} banned or restricted in the EU`,
+        detail: `${names.join(', ')}${suffix} — permitted in the US, but banned or tightly restricted under EU Cosmetics Regulation 1223/2009.`,
+        impact: 'negative',
+        points: -15 * restricted.length,
+      });
+    }
+  }
+
+  // Cosmetics-only: EU-mandated fragrance allergens (Reg. 1223/2009 Annex
+  // III) are an informational "must be declared" flag, not a safety
+  // judgment — surfaced as a neutral factor so it shows up in "why this
+  // score" without moving the number.
+  const fragranceAllergens = matchedIngredients.filter((m) => m.ingredient.fragranceAllergen);
+  if (fragranceAllergens.length > 0) {
+    const names = fragranceAllergens.slice(0, 4).map((m) => m.ingredient.name);
+    const suffix = fragranceAllergens.length > 4 ? `, +${fragranceAllergens.length - 4} more` : '';
+    factors.push({
+      label: `Contains ${fragranceAllergens.length} declared fragrance allergen${fragranceAllergens.length > 1 ? 's' : ''}`,
+      detail: `${names.join(', ')}${suffix} — substances the EU requires to be individually named above a concentration threshold. Common and often naturally derived; this isn't a safety warning, just worth knowing if you're fragrance-sensitive.`,
+      impact: 'neutral',
+      points: 0,
     });
   }
 
@@ -503,7 +540,7 @@ export function analyzeScan(input: ScoringInput): ScoringOutput {
   const alerts = [...allergenAlerts, ...dietaryConflictAlerts].sort(
     (a, b) => TIER_ORDER[a.tier] - TIER_ORDER[b.tier]
   );
-  const ingredientFactors = buildIngredientFactors(matchedIngredients);
+  const ingredientFactors = buildIngredientFactors(matchedIngredients, region);
   const nutritionFactors = buildNutritionFactors(nutritionFacts, healthProfile.healthGoals, region);
   const allergyFactors = buildAllergyScoreFactors(alerts);
 

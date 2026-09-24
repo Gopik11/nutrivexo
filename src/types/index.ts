@@ -20,6 +20,15 @@ export type ConcernLevel = 'none' | 'low' | 'moderate' | 'high';
 
 export type ProductSource = 'scanned' | 'lookup' | 'barcode';
 
+/**
+ * Which curated ingredient database + scoring rules a scan runs against.
+ * The matching/scoring engine itself is domain-agnostic (match ingredients
+ * against a database, score against a profile) — only the database and a
+ * handful of domain-specific scoring rules differ. Defaults to 'food' for
+ * back-compat with scans saved before cosmetics support existed.
+ */
+export type ProductDomain = 'food' | 'cosmetics';
+
 export type RecommendationType = 'swap' | 'portion' | 'education';
 
 export type AllergenTier = 'contains' | 'may_contain' | 'cross_reactive' | 'dietary_conflict';
@@ -92,6 +101,22 @@ export interface Ingredient {
   ambiguousAllergenRisk?: boolean;
   /** Dietary-pattern conflicts this ingredient carries (vegan, halal, gluten, etc). */
   dietaryFlags?: DietaryFlag[];
+  /**
+   * Cosmetics-only: true when this ingredient is one of the 26 fragrance
+   * allergens the EU requires to be individually named on the label above a
+   * concentration threshold (Regulation 1223/2009 Annex III, as it stood
+   * before the 2023/1545 expansion to 82 — see cosmeticsIngredients.ts).
+   * Not a safety warning by itself; just a "must be declared" flag.
+   */
+  fragranceAllergen?: boolean;
+  /**
+   * Cosmetics-only: true when this ingredient is banned, or restricted well
+   * beyond a routine concentration cap, in EU cosmetics (Regulation
+   * 1223/2009 Annexes II/III) while remaining permitted in the US.
+   */
+  bannedInEU?: boolean;
+  /** Shown alongside `bannedInEU` when the active region is EU. */
+  euRestrictionNote?: string;
 }
 
 export interface NutritionFacts {
@@ -117,6 +142,8 @@ export interface Product {
   parsedIngredientIds: string[];
   nutritionFacts?: NutritionFacts;
   source: ProductSource;
+  /** Which ingredient database this was matched against. Absent means 'food' (pre-cosmetics scans). */
+  domain?: ProductDomain;
 }
 
 export interface ScanHistory {

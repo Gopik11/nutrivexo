@@ -16,8 +16,9 @@ import { useAppStore } from '../../store/useAppStore';
 import { analyzeProduct } from '../../services/analyzeProduct';
 import { isOcrAvailable, recognizeTextFromImage } from '../../services/ocr';
 import { lookupProductByBarcode } from '../../services/openFoodFacts';
+import { lookupCosmeticByBarcode } from '../../services/openBeautyFacts';
 import type { MainTabScreenProps } from '../../navigation/types';
-import type { NutritionFacts } from '../../types';
+import type { NutritionFacts, ProductDomain } from '../../types';
 
 type Mode = 'camera' | 'barcode' | 'manual';
 type CameraState = 'idle' | 'capturing' | 'processing' | 'error';
@@ -31,6 +32,10 @@ const ocrAvailable = isOcrAvailable();
 
 export function ScanScreen({ navigation }: MainTabScreenProps<'Scan'>) {
   const [permission, requestPermission] = useCameraPermissions();
+  // Which curated ingredient database this scan runs against. Orthogonal to `mode`
+  // (camera/barcode/manual is *how* you get the text in; domain is *what kind* of
+  // product it is) — not persisted, so it resets to Food each time the tab is opened.
+  const [domain, setDomain] = useState<ProductDomain>('food');
   // Barcode scanning is built into expo-camera's CameraView itself, so — unlike the OCR
   // "Camera" mode — it works even in a build without the ML Kit text-recognition module.
   const [mode, setMode] = useState<Mode>(ocrAvailable ? 'camera' : 'barcode');
@@ -70,6 +75,7 @@ export function ScanScreen({ navigation }: MainTabScreenProps<'Scan'>) {
       healthProfile: healthProfileDraft,
       mutedAmbiguousAllergens: settings.mutedAmbiguousAllergens,
       region: settings.region,
+      domain,
       source: extra?.source ?? (mode === 'camera' ? 'scanned' : 'lookup'),
       barcode: extra?.barcode,
       brand: extra?.brand,
@@ -114,14 +120,21 @@ export function ScanScreen({ navigation }: MainTabScreenProps<'Scan'>) {
       setBarcodeState('looking-up');
       setBarcodeError(null);
       try {
-        const lookup = await lookupProductByBarcode(result.data);
+        // Normalize both lookup services into one shape here (Open Beauty Facts has no
+        // nutrition table) so the found/error handling below stays shared either way.
+        const lookup =
+          domain === 'cosmetics'
+            ? { ...(await lookupCosmeticByBarcode(result.data)), nutritionFacts: undefined as NutritionFacts | undefined }
+            : await lookupProductByBarcode(result.data);
         if (lookup.networkError) {
           setBarcodeError(strings.scan.barcodeLookupFailed);
           setBarcodeState('error');
           return;
         }
         if (!lookup.found) {
-          setBarcodeError(strings.scan.barcodeNotFound);
+          setBarcodeError(
+            domain === 'cosmetics' ? strings.scan.barcodeNotFoundCosmetics : strings.scan.barcodeNotFound
+          );
           setBarcodeState('error');
           return;
         }
@@ -142,7 +155,33 @@ export function ScanScreen({ navigation }: MainTabScreenProps<'Scan'>) {
         barcodeLookupInFlight.current = false;
       }
     },
-    [runAnalysis]
+    [runAnalysis, domain]
+  );
+
+  const renderDomainSwitch = () => (
+    <View className="flex-row bg-neutral-800/60 rounded-full p-1 self-center mb-3">
+      {(['food', 'cosmetics'] as const).map((option) => (
+        <Pressable
+          key={option}
+          accessibilityRole="radio"
+          accessibilityLabel={option === 'food' ? strings.scan.domainFood : strings.scan.domainCosmetics}
+          accessibilityState={{ checked: domain === option }}
+          onPress={() => {
+            if (domain === option) return;
+            setDomain(option);
+            setBarcodeState('scanning');
+            setBarcodeError(null);
+            setCameraState('idle');
+            setCameraError(null);
+          }}
+          className={['px-4 py-1.5 rounded-full', domain === option ? 'bg-accent-500' : ''].join(' ')}
+        >
+          <Text className={domain === option ? 'text-white font-semibold' : 'text-neutral-400'}>
+            {option === 'food' ? strings.scan.domainFood : strings.scan.domainCosmetics}
+          </Text>
+        </Pressable>
+      ))}
+    </View>
   );
 
   const renderModeSwitch = () => (
@@ -369,11 +408,15 @@ export function ScanScreen({ navigation }: MainTabScreenProps<'Scan'>) {
         accessibilityLabel="Product name"
         className="bg-neutral-800 text-white rounded-lg px-4 py-3 mb-4"
       />
-      <Text className="text-body-sm text-neutral-400 mb-2">{strings.scan.ingredientsLabel}</Text>
+      <Text className="text-body-sm text-neutral-400 mb-2">
+        {domain === 'cosmetics' ? strings.scan.ingredientsLabelCosmetics : strings.scan.ingredientsLabel}
+      </Text>
       <TextInput
         value={manualText}
         onChangeText={setManualText}
-        placeholder={strings.scan.ingredientsPlaceholder}
+        placeholder={
+          domain === 'cosmetics' ? strings.scan.ingredientsPlaceholderCosmetics : strings.scan.ingredientsPlaceholder
+        }
         placeholderTextColor="#7A7268"
         multiline
         textAlignVertical="top"
@@ -397,6 +440,7 @@ export function ScanScreen({ navigation }: MainTabScreenProps<'Scan'>) {
           <Text className="text-body-sm text-neutral-300">{strings.scan.subtitle}</Text>
         </View>
 
+        {renderDomainSwitch()}
         {renderModeSwitch()}
 
         <View className="flex-1 pb-6">

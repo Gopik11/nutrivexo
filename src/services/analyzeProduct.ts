@@ -7,6 +7,7 @@ import type {
   NutritionFacts,
   OnboardingHealthProfileDraft,
   Product,
+  ProductDomain,
   Recommendation,
   Region,
 } from '../types';
@@ -19,6 +20,8 @@ export interface AnalyzeProductInput {
   mutedAmbiguousAllergens?: string[];
   /** Which region's allergen list + nutrition thresholds to score against. Defaults to 'US'. */
   region?: Region;
+  /** Which curated ingredient database to match against. Defaults to 'food'. */
+  domain?: ProductDomain;
   barcode?: string;
   brand?: string;
   category?: string;
@@ -53,13 +56,17 @@ export function analyzeProduct(input: AnalyzeProductInput): AnalysisResult {
     source = 'scanned',
     mutedAmbiguousAllergens,
     region,
+    domain = 'food',
     barcode,
     brand,
     category,
   } = input;
 
-  const { matched, unmatchedTerms } = matchIngredients(rawText);
-  const nutritionFacts = input.nutritionFacts ?? parseNutritionFacts(rawText);
+  const { matched, unmatchedTerms } = matchIngredients(rawText, domain);
+  // Cosmetics labels don't carry nutrition facts — skip the OCR nutrition-line
+  // parser entirely rather than risk a false-positive match on stray numbers.
+  const nutritionFacts =
+    domain === 'cosmetics' ? undefined : input.nutritionFacts ?? parseNutritionFacts(rawText);
 
   const { score, scoreLevel, scoreFactors, alerts, recommendations } = analyzeScan({
     matchedIngredients: matched,
@@ -86,6 +93,7 @@ export function analyzeProduct(input: AnalyzeProductInput): AnalysisResult {
     parsedIngredientIds: matched.map((m) => m.ingredient.id),
     nutritionFacts,
     source,
+    domain,
   };
 
   const scanId = generateId('scan');
