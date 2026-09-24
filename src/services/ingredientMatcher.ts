@@ -19,6 +19,18 @@ export interface MatchOutcome {
   unmatchedTerms: string[];
 }
 
+/**
+ * Whole-word/whole-phrase containment: true when `needle` appears in `haystack` on word
+ * boundaries (space-padding both sides), not merely as a raw character substring. Both inputs
+ * are already `normalize()`d, so words are separated by single spaces. This is what stops, e.g.,
+ * "unsalted butter" from matching "salt" (embedded inside "un-salt-ed", not a separate word) or
+ * "buckwheat flour" from matching the "wheat" alias (embedded inside "buck-wheat").
+ */
+function containsWholeWord(haystack: string, needle: string): boolean {
+  if (needle.length === 0) return false;
+  return ` ${haystack} `.includes(` ${needle} `);
+}
+
 function matchToken(token: string): MatchedIngredient | null {
   // 1. Exact name/alias match.
   for (const entry of LOOKUP_TABLE) {
@@ -30,16 +42,21 @@ function matchToken(token: string): MatchedIngredient | null {
     }
   }
 
-  // 2. Substring containment either direction (handles "enriched wheat flour"
-  //    containing "wheat flour", or a short DB name inside a longer token).
+  // 2. Whole-word containment either direction (handles "enriched wheat flour"
+  //    containing "wheat flour", or a short DB name as a standalone word inside a longer
+  //    token) — word-boundary-aware so a DB name embedded inside a *different* word
+  //    (e.g. "salt" inside "unsalted") doesn't count.
   for (const entry of LOOKUP_TABLE) {
-    if (token.includes(entry.normalizedName) || entry.normalizedName.includes(token)) {
-      if (entry.normalizedName.length >= 4) {
+    if (entry.normalizedName.length >= 4) {
+      if (
+        containsWholeWord(token, entry.normalizedName) ||
+        containsWholeWord(entry.normalizedName, token)
+      ) {
         return { ingredient: entry.ingredient, matchedText: token, confidence: 'alias' };
       }
     }
     for (const alias of entry.normalizedAliases) {
-      if (alias.length >= 4 && (token.includes(alias) || alias.includes(token))) {
+      if (alias.length >= 4 && (containsWholeWord(token, alias) || containsWholeWord(alias, token))) {
         return { ingredient: entry.ingredient, matchedText: token, confidence: 'alias' };
       }
     }
