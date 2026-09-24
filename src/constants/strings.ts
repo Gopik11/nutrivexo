@@ -179,6 +179,7 @@ export const strings = {
     betterAlternatives: 'Better alternatives nearby',
     betterAlternativesLoading: 'Looking for better alternatives…',
     betterAlternativesSubtitle: 'Other products in this category that score higher for you, from Open Food Facts.',
+    reportIncorrectInfo: 'Something look wrong? Report it on Open Food Facts →',
   },
 
   settings: {

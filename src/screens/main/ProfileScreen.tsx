@@ -31,6 +31,9 @@ export function ProfileScreen({ navigation }: MainTabScreenProps<'Profile'>) {
   const healthProfileDraft = useAppStore((state) => state.healthProfileDraft);
   const resetOnboarding = useAppStore((state) => state.resetOnboarding);
   const savedScans = useAppStore((state) => state.savedScans);
+  const householdMembers = useAppStore((state) => state.householdMembers);
+  const activeMemberId = useAppStore((state) => state.activeMemberId);
+  const activeMemberName = householdMembers.find((m) => m.id === activeMemberId)?.name;
 
   const confirmResetOnboarding = () => {
     Alert.alert(
@@ -47,7 +50,9 @@ export function ProfileScreen({ navigation }: MainTabScreenProps<'Profile'>) {
     <ScreenLayout title={strings.profile.title}>
       <Card variant="outlined" className="mb-4">
         <View className="flex-row items-center justify-between mb-3">
-          <Text className="text-h3 text-neutral-800">{strings.profile.healthProfile}</Text>
+          <Text className="text-h3 text-neutral-800">
+            {activeMemberName ? `${strings.profile.healthProfile} — ${activeMemberName}` : strings.profile.healthProfile}
+          </Text>
           <Text className="text-caption text-neutral-500">{savedScans.length} scans saved</Text>
         </View>
         <View className="flex-row flex-wrap gap-2">
@@ -92,6 +97,16 @@ export function ProfileScreen({ navigation }: MainTabScreenProps<'Profile'>) {
           label={strings.profile.dataPrivacy}
           onPress={() => navigation.navigate('DataPrivacy')}
         />
+        <ProfileRow
+          icon="people-outline"
+          label={
+            householdMembers.length > 1
+              ? `Household profiles (${householdMembers.length})`
+              : 'Household profiles'
+          }
+          onPress={() => navigation.navigate('Household')}
+        />
+        <ProfileRow icon="cloud-upload-outline" label="Backup & restore" onPress={() => navigation.navigate('Backup')} />
       </Card>
 
       <Pressable

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { AlertBanner, Badge, Button, Card, ScoreRing, scoreLevelToBadgeVariant } from '../../components/ui';
@@ -299,6 +299,21 @@ export function ResultsScreen({ route, navigation }: Props) {
               ))}
             </View>
           </Card>
+        )}
+
+        {view.product.source === 'barcode' && view.product.barcode && (
+          <Text
+            accessibilityRole="button"
+            accessibilityLabel="Report incorrect product info"
+            onPress={() =>
+              Linking.openURL(
+                `https://world.openfoodfacts.org/product/${view.product.barcode}`
+              )
+            }
+            className="text-caption text-accent-600 text-center mt-3"
+          >
+            {strings.results.reportIncorrectInfo}
+          </Text>
         )}
 
         <Text className="text-caption text-neutral-400 text-center mt-2">

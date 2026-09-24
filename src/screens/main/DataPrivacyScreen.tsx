@@ -11,8 +11,8 @@ type Props = MainStackScreenProps<'DataPrivacy'>;
 const dataPoints = [
   {
     icon: 'body-outline' as const,
-    title: 'Health profile',
-    body: 'Allergies, conditions, dietary pattern, and goals you chose during setup.',
+    title: 'Health profile(s)',
+    body: 'Allergies, conditions, dietary patterns, and goals you chose during setup — one profile per household member, if you’ve added more than one.',
   },
   {
     icon: 'time-outline' as const,

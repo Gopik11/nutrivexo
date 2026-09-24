@@ -27,6 +27,9 @@ export type MainStackParamList = {
   Settings: undefined;
   DisclaimerView: undefined;
   DataPrivacy: undefined;
+  Household: undefined;
+  Backup: undefined;
+  Compare: { scanIds: string[] };
 };
 
 export type RootStackParamList = {

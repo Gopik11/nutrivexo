@@ -1,9 +1,27 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { AnalysisResult, AppSettings, OnboardingHealthProfileDraft, SavedScan } from '../types';
+import type {
+  AnalysisResult,
+  AppSettings,
+  HouseholdMember,
+  OnboardingHealthProfileDraft,
+  SavedScan,
+} from '../types';
 import { generateId } from '../services/id';
 import { cancelWeeklyDigest } from '../services/notifications';
+
+const BACKUP_VERSION = 1;
+
+interface BackupPayload {
+  version: number;
+  exportedAt: string;
+  healthProfileDraft: OnboardingHealthProfileDraft;
+  householdMembers: HouseholdMember[];
+  activeMemberId: string | null;
+  savedScans: SavedScan[];
+  settings: AppSettings;
+}
 
 interface AppState {
   hasCompletedOnboarding: boolean;
@@ -17,6 +35,10 @@ interface AppState {
   healthProfileDraft: OnboardingHealthProfileDraft;
   savedScans: SavedScan[];
   settings: AppSettings;
+  /** Household/family profiles. Empty until the user adds their first one via the
+   * Household screen — until then the app behaves exactly as a single-profile app. */
+  householdMembers: HouseholdMember[];
+  activeMemberId: string | null;
 
   setHasHydrated: (hydrated: boolean) => void;
   setDisclaimerAccepted: (accepted: boolean) => void;
@@ -45,6 +67,20 @@ interface AppState {
   clearHistory: () => void;
   updateSettings: (patch: Partial<AppSettings>) => void;
   clearAllData: () => void;
+
+  addHouseholdMember: (name: string) => void;
+  renameHouseholdMember: (id: string, name: string) => void;
+  removeHouseholdMember: (id: string) => void;
+  /** Snapshots the current profile back into the outgoing active member, then loads the target
+   * member's profile into `healthProfileDraft` — every existing screen keeps reading/writing
+   * `healthProfileDraft` exactly as before, with no awareness that household mode exists. */
+  switchActiveMember: (id: string) => void;
+
+  /** Serializes everything the user would want backed up to a JSON string, for the user to save
+   * via the OS share sheet (email, Drive, Files, etc) — there's no Nutrivexo server involved. */
+  exportBackup: () => string;
+  /** Restores from a JSON string previously produced by exportBackup. Replaces current data. */
+  restoreBackup: (json: string) => { success: boolean; error?: string };
 }
 
 const NO_SPECIFIC_PATTERN = 'No specific pattern';
@@ -63,7 +99,7 @@ const defaultSettings: AppSettings = {
   mutedAmbiguousAllergens: [],
 };
 
-function toSavedScan(analysis: AnalysisResult): SavedScan {
+function toSavedScan(analysis: AnalysisResult, scoredForMemberName?: string): SavedScan {
   return {
     id: generateId('savedscan'),
     scannedAt: new Date().toISOString(),
@@ -76,6 +112,7 @@ function toSavedScan(analysis: AnalysisResult): SavedScan {
     unmatchedTerms: analysis.unmatchedTerms,
     scoreFactors: analysis.scoreFactors,
     lowConfidence: analysis.lowConfidence,
+    scoredForMemberName,
   };
 }
 
@@ -90,6 +127,8 @@ export const useAppStore = create<AppState>()(
       healthProfileDraft: defaultHealthProfileDraft,
       savedScans: [],
       settings: defaultSettings,
+      householdMembers: [],
+      activeMemberId: null,
 
       setHasHydrated: (hydrated) => set({ hasHydrated: hydrated }),
 
@@ -144,7 +183,14 @@ export const useAppStore = create<AppState>()(
         }),
 
       saveScan: (analysis) => {
-        const savedScan = toSavedScan(analysis);
+        const { householdMembers, activeMemberId } = get();
+        // Only tag a scan with who it was for once there's more than one member — with a single
+        // (or no) household member, that context would just be noise in the history list.
+        const scoredForMemberName =
+          householdMembers.length > 1
+            ? householdMembers.find((m) => m.id === activeMemberId)?.name
+            : undefined;
+        const savedScan = toSavedScan(analysis, scoredForMemberName);
         set({ savedScans: [savedScan, ...get().savedScans] });
         return savedScan;
       },
@@ -163,7 +209,105 @@ export const useAppStore = create<AppState>()(
           savedScans: [],
           healthProfileDraft: defaultHealthProfileDraft,
           settings: defaultSettings,
+          householdMembers: [],
+          activeMemberId: null,
         });
+      },
+
+      addHouseholdMember: (name) => {
+        // First member added: seed it from the current (single) profile so nothing is lost, and
+        // make it explicitly "Me" before adding the new one alongside it.
+        if (get().householdMembers.length === 0) {
+          const meId = generateId('member');
+          set({
+            householdMembers: [{ id: meId, name: 'Me', profile: get().healthProfileDraft }],
+            activeMemberId: meId,
+          });
+        }
+        const newId = generateId('member');
+        const newMember: HouseholdMember = {
+          id: newId,
+          name: name.trim() || 'New member',
+          profile: defaultHealthProfileDraft,
+        };
+        set({ householdMembers: [...get().householdMembers, newMember] });
+        get().switchActiveMember(newId);
+      },
+
+      renameHouseholdMember: (id, name) =>
+        set({
+          householdMembers: get().householdMembers.map((m) =>
+            m.id === id ? { ...m, name: name.trim() || m.name } : m
+          ),
+        }),
+
+      removeHouseholdMember: (id) => {
+        const { householdMembers, activeMemberId } = get();
+        const remaining = householdMembers.filter((m) => m.id !== id);
+        if (activeMemberId !== id) {
+          set({ householdMembers: remaining });
+          return;
+        }
+        if (remaining.length === 0) {
+          // Removed the only/last member — fall back to single-profile mode, keeping whatever
+          // profile that member currently had active as the plain healthProfileDraft.
+          set({ householdMembers: [], activeMemberId: null });
+          return;
+        }
+        set({ householdMembers: remaining });
+        get().switchActiveMember(remaining[0].id);
+      },
+
+      switchActiveMember: (id) => {
+        const { householdMembers, activeMemberId, healthProfileDraft } = get();
+        // Snapshot the outgoing member's in-progress edits back into their slot first.
+        const updatedMembers = householdMembers.map((m) =>
+          m.id === activeMemberId ? { ...m, profile: healthProfileDraft } : m
+        );
+        const target = updatedMembers.find((m) => m.id === id);
+        if (!target) return;
+        set({
+          householdMembers: updatedMembers,
+          activeMemberId: id,
+          healthProfileDraft: target.profile,
+        });
+      },
+
+      exportBackup: () => {
+        const state = get();
+        const backup: BackupPayload = {
+          version: BACKUP_VERSION,
+          exportedAt: new Date().toISOString(),
+          healthProfileDraft: state.healthProfileDraft,
+          householdMembers: state.householdMembers,
+          activeMemberId: state.activeMemberId,
+          savedScans: state.savedScans,
+          settings: state.settings,
+        };
+        return JSON.stringify(backup, null, 2);
+      },
+
+      restoreBackup: (json) => {
+        let parsed: Partial<BackupPayload>;
+        try {
+          parsed = JSON.parse(json);
+        } catch {
+          return {
+            success: false,
+            error: "That doesn't look like valid backup text — make sure you pasted the whole thing.",
+          };
+        }
+        if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.savedScans)) {
+          return { success: false, error: "That doesn't look like a Nutrivexo backup." };
+        }
+        set({
+          healthProfileDraft: parsed.healthProfileDraft ?? defaultHealthProfileDraft,
+          householdMembers: Array.isArray(parsed.householdMembers) ? parsed.householdMembers : [],
+          activeMemberId: parsed.activeMemberId ?? null,
+          savedScans: parsed.savedScans,
+          settings: { ...defaultSettings, ...(parsed.settings ?? {}) },
+        });
+        return { success: true };
       },
     }),
     {
@@ -174,6 +318,8 @@ export const useAppStore = create<AppState>()(
         healthProfileDraft: state.healthProfileDraft,
         savedScans: state.savedScans,
         settings: state.settings,
+        householdMembers: state.householdMembers,
+        activeMemberId: state.activeMemberId,
       }),
       onRehydrateStorage: () => (state, error) => {
         // Always flip hasHydrated, even if AsyncStorage read failed — otherwise RootNavigator's

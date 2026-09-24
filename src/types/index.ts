@@ -180,6 +180,20 @@ export interface SavedScan {
   unmatchedTerms: string[];
   scoreFactors: ScoreFactor[];
   lowConfidence?: boolean;
+  /** Name of the household member this was scored for, when more than one member exists. */
+  scoredForMemberName?: string;
+}
+
+/**
+ * A household/family member profile. Nutrivexo keeps one shared device and
+ * one shared scan history — switching the active member swaps which health
+ * profile (allergies, dietary patterns, goals) scoring uses, and each saved
+ * scan records which member it was scored for.
+ */
+export interface HouseholdMember {
+  id: string;
+  name: string;
+  profile: OnboardingHealthProfileDraft;
 }
 
 export interface AppSettings {

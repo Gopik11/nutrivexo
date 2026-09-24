@@ -6,6 +6,9 @@ import { EditProfileScreen } from '../screens/main/EditProfileScreen';
 import { SettingsScreen } from '../screens/main/SettingsScreen';
 import { DisclaimerViewScreen } from '../screens/main/DisclaimerViewScreen';
 import { DataPrivacyScreen } from '../screens/main/DataPrivacyScreen';
+import { HouseholdScreen } from '../screens/main/HouseholdScreen';
+import { BackupScreen } from '../screens/main/BackupScreen';
+import { CompareScreen } from '../screens/main/CompareScreen';
 
 const Stack = createNativeStackNavigator<MainStackParamList>();
 
@@ -24,6 +27,9 @@ export function MainNavigator() {
       <Stack.Screen name="Settings" component={SettingsScreen} />
       <Stack.Screen name="DisclaimerView" component={DisclaimerViewScreen} />
       <Stack.Screen name="DataPrivacy" component={DataPrivacyScreen} />
+      <Stack.Screen name="Household" component={HouseholdScreen} />
+      <Stack.Screen name="Backup" component={BackupScreen} />
+      <Stack.Screen name="Compare" component={CompareScreen} />
     </Stack.Navigator>
   );
 }
