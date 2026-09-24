@@ -1,7 +1,7 @@
 import { matchIngredients } from './ingredientMatcher';
 import { analyzeScan } from './scoring';
 import { searchProductsByCategory } from './openFoodFacts';
-import type { AnalysisResult, OnboardingHealthProfileDraft } from '../types';
+import type { AnalysisResult, OnboardingHealthProfileDraft, Region } from '../types';
 
 export interface SwapCandidate {
   barcode: string;
@@ -27,7 +27,8 @@ const MAX_RESULTS = 3;
 export async function findSwapCandidates(
   analysis: Pick<AnalysisResult, 'product' | 'score'>,
   healthProfile: OnboardingHealthProfileDraft,
-  mutedAmbiguousAllergens: string[] = []
+  mutedAmbiguousAllergens: string[] = [],
+  region: Region = 'US'
 ): Promise<SwapCandidate[]> {
   const { product } = analysis;
   if (product.source !== 'barcode' || !product.category) return [];
@@ -44,6 +45,7 @@ export async function findSwapCandidates(
       nutritionFacts: candidate.nutritionFacts,
       healthProfile,
       mutedAmbiguousAllergens,
+      region,
     });
 
     // Never suggest a "swap" that itself contains a flagged allergen.

@@ -25,6 +25,14 @@ export type RecommendationType = 'swap' | 'portion' | 'education';
 export type AllergenTier = 'contains' | 'may_contain' | 'cross_reactive' | 'dietary_conflict';
 
 /**
+ * Which regional allergen-labeling list and nutrition-threshold framing to use.
+ * US: the FDA's 9 major food allergens, %DV-style thresholds. EU: the 14
+ * allergens required by EU Regulation 1169/2011 Annex II, EU nutrient
+ * reference-intake-style thresholds.
+ */
+export type Region = 'US' | 'EU';
+
+/**
  * Dietary-pattern conflict markers, independent of the 9-allergen alert system.
  * An ingredient can carry several — e.g. gelatin is not-vegan, not-vegetarian,
  * not-halal, and not-kosher all at once. Left off an ingredient when the real
@@ -69,7 +77,13 @@ export interface Ingredient {
   functionTags: string[];
   concernLevel: ConcernLevel;
   concernReason?: string;
-  commonAllergenSource?: string;
+  /**
+   * Every allergen-label category this ingredient is a source of, across
+   * regions — e.g. wheat flour carries both the US "Wheat" category and the
+   * EU "Cereals containing gluten" category. A single ingredient can list
+   * several; region-aware matching just checks membership.
+   */
+  allergenSources?: string[];
   /**
    * Ingredients like "natural flavors" or "spices" can hide allergens without
    * naming them. When true, any user allergy triggers a low-confidence
@@ -206,4 +220,6 @@ export interface AppSettings {
    * Direct "contains" alerts and dietary-conflict alerts are never muted.
    */
   mutedAmbiguousAllergens?: string[];
+  /** Which regional allergen list + nutrition thresholds to use. Defaults to 'US'. */
+  region?: Region;
 }

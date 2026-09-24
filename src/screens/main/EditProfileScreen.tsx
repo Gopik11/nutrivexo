@@ -2,6 +2,7 @@ import { ScreenLayout } from '../../components/ScreenLayout';
 import { ChipSection } from '../../components/SelectableChip';
 import { Button } from '../../components/ui';
 import { strings } from '../../constants/strings';
+import { allergensForRegion } from '../../data/allergens';
 import { useAppStore } from '../../store/useAppStore';
 import type { MainStackScreenProps } from '../../navigation/types';
 
@@ -11,6 +12,8 @@ export function EditProfileScreen({ navigation }: Props) {
   const healthProfileDraft = useAppStore((state) => state.healthProfileDraft);
   const toggleHealthProfileItem = useAppStore((state) => state.toggleHealthProfileItem);
   const toggleDietaryPattern = useAppStore((state) => state.toggleDietaryPattern);
+  const region = useAppStore((state) => state.settings.region ?? 'US');
+  const allergyOptions = allergensForRegion(region);
 
   return (
     <ScreenLayout
@@ -21,8 +24,12 @@ export function EditProfileScreen({ navigation }: Props) {
     >
       <ChipSection
         title={strings.onboarding.healthProfile.allergies.title}
-        subtitle={strings.onboarding.healthProfile.allergies.subtitle}
-        options={strings.onboarding.healthProfile.allergies.options}
+        subtitle={
+          region === 'EU'
+            ? `${strings.onboarding.healthProfile.allergies.subtitle} Using the EU's 14-allergen list — change this in Settings.`
+            : `${strings.onboarding.healthProfile.allergies.subtitle} Using the US's 9-allergen list — change this in Settings.`
+        }
+        options={allergyOptions}
         selected={healthProfileDraft.allergies}
         onToggle={(item) => toggleHealthProfileItem('allergies', item)}
       />

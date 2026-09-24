@@ -8,6 +8,7 @@ import type {
   OnboardingHealthProfileDraft,
   Product,
   Recommendation,
+  Region,
 } from '../types';
 
 export interface AnalyzeProductInput {
@@ -16,6 +17,8 @@ export interface AnalyzeProductInput {
   healthProfile: OnboardingHealthProfileDraft;
   source?: Product['source'];
   mutedAmbiguousAllergens?: string[];
+  /** Which region's allergen list + nutrition thresholds to score against. Defaults to 'US'. */
+  region?: Region;
   barcode?: string;
   brand?: string;
   category?: string;
@@ -49,6 +52,7 @@ export function analyzeProduct(input: AnalyzeProductInput): AnalysisResult {
     healthProfile,
     source = 'scanned',
     mutedAmbiguousAllergens,
+    region,
     barcode,
     brand,
     category,
@@ -62,6 +66,7 @@ export function analyzeProduct(input: AnalyzeProductInput): AnalysisResult {
     nutritionFacts,
     healthProfile,
     mutedAmbiguousAllergens,
+    region,
   });
 
   const totalTerms = matched.length + unmatchedTerms.length;

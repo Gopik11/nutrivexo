@@ -6,10 +6,12 @@ import type {
   AppSettings,
   HouseholdMember,
   OnboardingHealthProfileDraft,
+  Region,
   SavedScan,
 } from '../types';
 import { generateId } from '../services/id';
 import { cancelWeeklyDigest } from '../services/notifications';
+import { remapAllergiesForRegion } from '../data/allergens';
 
 const BACKUP_VERSION = 1;
 
@@ -67,6 +69,10 @@ interface AppState {
   clearHistory: () => void;
   updateSettings: (patch: Partial<AppSettings>) => void;
   clearAllData: () => void;
+  /** Switches the active region's allergen list + nutrition-threshold framing, carrying
+   * existing allergy selections across renamed-but-equivalent categories (e.g. Wheat →
+   * Cereals containing gluten) for the active profile and every household member. */
+  setRegion: (region: Region) => void;
 
   addHouseholdMember: (name: string) => void;
   renameHouseholdMember: (id: string, name: string) => void;
@@ -200,6 +206,24 @@ export const useAppStore = create<AppState>()(
       clearHistory: () => set({ savedScans: [] }),
 
       updateSettings: (patch) => set({ settings: { ...get().settings, ...patch } }),
+
+      setRegion: (region) => {
+        const { healthProfileDraft, householdMembers } = get();
+        set({
+          settings: { ...get().settings, region },
+          healthProfileDraft: {
+            ...healthProfileDraft,
+            allergies: remapAllergiesForRegion(healthProfileDraft.allergies, region),
+          },
+          householdMembers: householdMembers.map((member) => ({
+            ...member,
+            profile: {
+              ...member.profile,
+              allergies: remapAllergiesForRegion(member.profile.allergies, region),
+            },
+          })),
+        });
+      },
 
       clearAllData: () => {
         // Cancel any OS-level scheduled notification too — resetting `settings` alone would leave

@@ -69,6 +69,7 @@ export function ScanScreen({ navigation }: MainTabScreenProps<'Scan'>) {
       productName: name,
       healthProfile: healthProfileDraft,
       mutedAmbiguousAllergens: settings.mutedAmbiguousAllergens,
+      region: settings.region,
       source: extra?.source ?? (mode === 'camera' ? 'scanned' : 'lookup'),
       barcode: extra?.barcode,
       brand: extra?.brand,

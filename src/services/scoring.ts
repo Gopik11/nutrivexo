@@ -8,6 +8,7 @@ import type {
   NutritionFacts,
   OnboardingHealthProfileDraft,
   Recommendation,
+  Region,
   ScoreFactor,
 } from '../types';
 
@@ -38,12 +39,58 @@ const CONCERN_PENALTY: Record<ConcernLevel, number> = {
 const POSITIVE_TAGS = new Set(['whole grain', 'fiber', 'legume', 'prebiotic', 'omega-3']);
 const PROCESSED_TAGS = new Set(['ultra-processed marker', 'artificial color', 'artificial sweetener']);
 
+interface NutritionThresholds {
+  sugarHigh: number;
+  sugarModerate: number;
+  sodiumHigh: number;
+  sodiumModerate: number;
+  saturatedFatHigh: number;
+  saturatedFatModerate: number;
+}
+
+/**
+ * Per-serving "high"/"moderate" cutoffs for added sugar (g), sodium (mg), and
+ * saturated fat (g), by region.
+ *
+ * US: loosely modeled on FDA %DV framing (labels flag ≥20% DV as high), using
+ * round per-serving numbers close to that convention.
+ *
+ * EU: there's no single mandatory EU-wide front-of-pack scheme, so this uses
+ * the UK FSA/Department of Health "traffic light" labelling thresholds — the
+ * most widely adopted FoP convention among EU-market retailers. The FSA
+ * defines "red" (high) per 100g, with separate per-portion red cutoffs for
+ * portions over 100g (Total Fat >21g, Saturates >6g, Sugars >27g, Salt >1.8g);
+ * it does not define a separate per-portion "amber" (moderate) cutoff, so the
+ * per-100g green/amber boundary (Saturates 1.5g, Sugars 5g, Salt 0.3g) is used
+ * here as the moderate threshold. Salt→sodium: sodium(mg) = salt(g) × 400.
+ */
+const NUTRITION_THRESHOLDS: Record<Region, NutritionThresholds> = {
+  US: {
+    sugarHigh: 15,
+    sugarModerate: 8,
+    sodiumHigh: 600,
+    sodiumModerate: 300,
+    saturatedFatHigh: 5,
+    saturatedFatModerate: 3,
+  },
+  EU: {
+    sugarHigh: 27,
+    sugarModerate: 5,
+    sodiumHigh: 720, // 1.8g salt
+    sodiumModerate: 120, // 0.3g salt
+    saturatedFatHigh: 6,
+    saturatedFatModerate: 1.5,
+  },
+};
+
 export interface ScoringInput {
   matchedIngredients: MatchedIngredient[];
   nutritionFacts?: NutritionFacts;
   healthProfile: OnboardingHealthProfileDraft;
   /** Allergens the user has muted from ambiguous ("may contain") alerts, via Settings. */
   mutedAmbiguousAllergens?: string[];
+  /** Which region's allergen list + nutrition thresholds to score against. Defaults to 'US'. */
+  region?: Region;
 }
 
 export interface ScoringOutput {
@@ -72,35 +119,46 @@ function buildAllergenAlerts(
       ambiguousIngredientNames.add(ingredient.name);
     }
 
-    const source = ingredient.commonAllergenSource;
-    if (!source) continue;
+    // An ingredient can carry several region-specific labels for the same source
+    // (e.g. wheat flour is both US "Wheat" and EU "Cereals containing gluten") —
+    // check every one of them, not just a single canonical source string.
+    const sources = ingredient.allergenSources;
+    if (!sources || sources.length === 0) continue;
 
-    if (isKnownAllergen(source) && userAllergens.includes(source)) {
-      const key = `contains:${source}`;
-      if (!seen.has(key)) {
-        seen.add(key);
-        alerts.push({
-          tier: 'contains',
-          allergen: source,
-          ingredientName: ingredient.name,
-          message: `Contains ${source.toLowerCase()} (from ${ingredient.name}) — you've flagged ${source.toLowerCase()} as an allergy.`,
-        });
-      }
-      continue;
-    }
-
-    for (const allergen of userAllergens) {
-      const relatedSources = CROSS_REACTIVITY_MAP[allergen] ?? [];
-      if (relatedSources.includes(source)) {
-        const key = `cross:${allergen}:${source}`;
+    let matchedDirectly = false;
+    for (const source of sources) {
+      if (isKnownAllergen(source) && userAllergens.includes(source)) {
+        matchedDirectly = true;
+        const key = `contains:${source}`;
         if (!seen.has(key)) {
           seen.add(key);
           alerts.push({
-            tier: 'cross_reactive',
-            allergen,
+            tier: 'contains',
+            allergen: source,
             ingredientName: ingredient.name,
-            message: `${ingredient.name} is sometimes cross-reactive with ${allergen.toLowerCase()} — worth checking with your doctor if you're highly sensitive.`,
+            message: `Contains ${source.toLowerCase()} (from ${ingredient.name}) — you've flagged ${source.toLowerCase()} as an allergy.`,
           });
+        }
+      }
+    }
+    // A direct "contains" match already covers this ingredient — no need to also
+    // flag it as merely cross-reactive with something else on the user's list.
+    if (matchedDirectly) continue;
+
+    for (const source of sources) {
+      for (const allergen of userAllergens) {
+        const relatedSources = CROSS_REACTIVITY_MAP[allergen] ?? [];
+        if (relatedSources.includes(source)) {
+          const key = `cross:${allergen}:${source}`;
+          if (!seen.has(key)) {
+            seen.add(key);
+            alerts.push({
+              tier: 'cross_reactive',
+              allergen,
+              ingredientName: ingredient.name,
+              message: `${ingredient.name} is sometimes cross-reactive with ${allergen.toLowerCase()} — worth checking with your doctor if you're highly sensitive.`,
+            });
+          }
         }
       }
     }
@@ -179,23 +237,28 @@ const TIER_ORDER: Record<AllergenAlert['tier'], number> = {
 
 function buildNutritionFactors(
   facts: NutritionFacts | undefined,
-  goals: string[]
+  goals: string[],
+  region: Region = 'US'
 ): ScoreFactor[] {
   if (!facts) return [];
   const factors: ScoreFactor[] = [];
   const wantsLessSugar = goals.includes('Reduce added sugar');
   const wantsLessSodium = goals.includes('Lower sodium');
+  const t = NUTRITION_THRESHOLDS[region];
 
   const addedSugars = facts.addedSugars ?? facts.sugars;
   if (addedSugars !== undefined) {
-    if (addedSugars > 15) {
+    if (addedSugars > t.sugarHigh) {
       factors.push({
         label: 'High in sugar',
-        detail: `${addedSugars}g sugar per serving is high — more than half a typical daily budget.`,
+        detail:
+          region === 'EU'
+            ? `${addedSugars}g sugar per serving — "high" under UK/EU front-of-pack guidance (>${t.sugarHigh}g).`
+            : `${addedSugars}g sugar per serving is high — more than half a typical daily budget.`,
         impact: 'negative',
         points: wantsLessSugar ? -20 : -15,
       });
-    } else if (addedSugars > 8) {
+    } else if (addedSugars > t.sugarModerate) {
       factors.push({
         label: 'Moderate sugar',
         detail: `${addedSugars}g sugar per serving.`,
@@ -206,14 +269,17 @@ function buildNutritionFactors(
   }
 
   if (facts.sodium !== undefined) {
-    if (facts.sodium > 600) {
+    if (facts.sodium > t.sodiumHigh) {
       factors.push({
         label: 'High in sodium',
-        detail: `${facts.sodium}mg sodium per serving — roughly a quarter of a full day's guidance in one serving.`,
+        detail:
+          region === 'EU'
+            ? `${facts.sodium}mg sodium per serving — over the UK/EU "high salt" cutoff (>${t.sodiumHigh}mg, ~${(t.sodiumHigh / 400).toFixed(1)}g salt).`
+            : `${facts.sodium}mg sodium per serving — roughly a quarter of a full day's guidance in one serving.`,
         impact: 'negative',
         points: wantsLessSodium ? -18 : -12,
       });
-    } else if (facts.sodium > 300) {
+    } else if (facts.sodium > t.sodiumModerate) {
       factors.push({
         label: 'Moderate sodium',
         detail: `${facts.sodium}mg sodium per serving.`,
@@ -224,14 +290,14 @@ function buildNutritionFactors(
   }
 
   if (facts.saturatedFat !== undefined) {
-    if (facts.saturatedFat > 5) {
+    if (facts.saturatedFat > t.saturatedFatHigh) {
       factors.push({
         label: 'High in saturated fat',
         detail: `${facts.saturatedFat}g saturated fat per serving.`,
         impact: 'negative',
         points: -8,
       });
-    } else if (facts.saturatedFat > 3) {
+    } else if (facts.saturatedFat > t.saturatedFatModerate) {
       factors.push({
         label: 'Some saturated fat',
         detail: `${facts.saturatedFat}g saturated fat per serving.`,
@@ -368,9 +434,11 @@ function buildRecommendations(
   nutritionFacts: NutritionFacts | undefined,
   healthProfile: OnboardingHealthProfileDraft,
   score: number,
-  alerts: AllergenAlert[]
+  alerts: AllergenAlert[],
+  region: Region = 'US'
 ): Omit<Recommendation, 'scanId'>[] {
   const recommendations: Omit<Recommendation, 'scanId'>[] = [];
+  const t = NUTRITION_THRESHOLDS[region];
 
   const highConcern = matchedIngredients
     .filter((m) => m.ingredient.concernLevel === 'high')
@@ -383,14 +451,14 @@ function buildRecommendations(
   }
 
   const addedSugars = nutritionFacts?.addedSugars ?? nutritionFacts?.sugars;
-  if (addedSugars !== undefined && addedSugars > 15) {
+  if (addedSugars !== undefined && addedSugars > t.sugarHigh) {
     recommendations.push({
       type: 'portion',
       content: `At ${addedSugars}g of sugar per serving, this fits best as an occasional treat rather than an everyday choice.`,
     });
   } else if (
     nutritionFacts?.sodium !== undefined &&
-    nutritionFacts.sodium > 500 &&
+    nutritionFacts.sodium > t.sodiumModerate + (t.sodiumHigh - t.sodiumModerate) / 2 &&
     healthProfile.healthGoals.includes('Lower sodium')
   ) {
     recommendations.push({
@@ -415,8 +483,13 @@ function buildRecommendations(
 }
 
 export function analyzeScan(input: ScoringInput): ScoringOutput {
-  const { matchedIngredients, nutritionFacts, healthProfile, mutedAmbiguousAllergens = [] } =
-    input;
+  const {
+    matchedIngredients,
+    nutritionFacts,
+    healthProfile,
+    mutedAmbiguousAllergens = [],
+    region = 'US',
+  } = input;
 
   const allergenAlerts = buildAllergenAlerts(
     matchedIngredients,
@@ -431,7 +504,7 @@ export function analyzeScan(input: ScoringInput): ScoringOutput {
     (a, b) => TIER_ORDER[a.tier] - TIER_ORDER[b.tier]
   );
   const ingredientFactors = buildIngredientFactors(matchedIngredients);
-  const nutritionFactors = buildNutritionFactors(nutritionFacts, healthProfile.healthGoals);
+  const nutritionFactors = buildNutritionFactors(nutritionFacts, healthProfile.healthGoals, region);
   const allergyFactors = buildAllergyScoreFactors(alerts);
 
   const scoreFactors = [...allergyFactors, ...ingredientFactors, ...nutritionFactors];
@@ -443,7 +516,8 @@ export function analyzeScan(input: ScoringInput): ScoringOutput {
     nutritionFacts,
     healthProfile,
     score,
-    alerts
+    alerts,
+    region
   );
 
   return {

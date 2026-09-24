@@ -205,7 +205,7 @@ export const INGREDIENT_DATABASE: Ingredient[] = [
     functionTags: ['fat', 'saturated fat'],
     concernLevel: 'low',
     concernReason: 'High in saturated fat compared to other plant oils.',
-    commonAllergenSource: 'Coconut',
+    allergenSources: ['Coconut'],
   },
 
   // ---- Preservatives ---------------------------------------------------
@@ -271,6 +271,7 @@ export const INGREDIENT_DATABASE: Ingredient[] = [
     functionTags: ['preservative'],
     concernLevel: 'moderate',
     concernReason: 'Can trigger reactions in people with sulfite sensitivity, including some with asthma.',
+    allergenSources: ['Sulphites'],
   },
 
   // ---- Colors -------------------------------------------------------
@@ -372,7 +373,7 @@ export const INGREDIENT_DATABASE: Ingredient[] = [
     aliases: ['lecithin', 'soya lecithin'],
     functionTags: ['emulsifier'],
     concernLevel: 'none',
-    commonAllergenSource: 'Soy',
+    allergenSources: ['Soy', 'Soybeans'],
   },
   {
     id: 'xanthan-gum',
@@ -460,7 +461,7 @@ export const INGREDIENT_DATABASE: Ingredient[] = [
     aliases: ['milk powder', 'nonfat milk', 'whole milk', 'dry milk'],
     functionTags: ['dairy', 'protein'],
     concernLevel: 'none',
-    commonAllergenSource: 'Milk',
+    allergenSources: ['Milk'],
     dietaryFlags: ['not-vegan', 'contains-lactose'],
   },
   {
@@ -469,7 +470,7 @@ export const INGREDIENT_DATABASE: Ingredient[] = [
     aliases: ['whey protein', 'whey powder'],
     functionTags: ['dairy', 'protein'],
     concernLevel: 'none',
-    commonAllergenSource: 'Milk',
+    allergenSources: ['Milk'],
     dietaryFlags: ['not-vegan', 'contains-lactose'],
   },
   {
@@ -478,7 +479,7 @@ export const INGREDIENT_DATABASE: Ingredient[] = [
     aliases: ['caseinate', 'sodium caseinate'],
     functionTags: ['dairy', 'protein'],
     concernLevel: 'none',
-    commonAllergenSource: 'Milk',
+    allergenSources: ['Milk'],
     dietaryFlags: ['not-vegan', 'contains-lactose'],
   },
   {
@@ -487,7 +488,7 @@ export const INGREDIENT_DATABASE: Ingredient[] = [
     aliases: [],
     functionTags: ['dairy', 'fat', 'saturated fat'],
     concernLevel: 'low',
-    commonAllergenSource: 'Milk',
+    allergenSources: ['Milk'],
     dietaryFlags: ['not-vegan', 'contains-lactose'],
   },
   {
@@ -496,7 +497,7 @@ export const INGREDIENT_DATABASE: Ingredient[] = [
     aliases: ['eggs', 'egg white', 'egg yolk', 'whole egg', 'dried egg'],
     functionTags: ['protein'],
     concernLevel: 'none',
-    commonAllergenSource: 'Eggs',
+    allergenSources: ['Eggs'],
     dietaryFlags: ['not-vegan'],
   },
   {
@@ -505,7 +506,7 @@ export const INGREDIENT_DATABASE: Ingredient[] = [
     aliases: ['peanuts', 'peanut flour', 'peanut butter'],
     functionTags: ['nut', 'protein'],
     concernLevel: 'none',
-    commonAllergenSource: 'Peanuts',
+    allergenSources: ['Peanuts'],
   },
   {
     id: 'almond',
@@ -513,7 +514,7 @@ export const INGREDIENT_DATABASE: Ingredient[] = [
     aliases: ['almonds', 'almond flour', 'almond meal'],
     functionTags: ['tree nut'],
     concernLevel: 'none',
-    commonAllergenSource: 'Tree nuts',
+    allergenSources: ['Tree nuts'],
   },
   {
     id: 'cashew',
@@ -521,7 +522,7 @@ export const INGREDIENT_DATABASE: Ingredient[] = [
     aliases: ['cashews'],
     functionTags: ['tree nut'],
     concernLevel: 'none',
-    commonAllergenSource: 'Tree nuts',
+    allergenSources: ['Tree nuts'],
   },
   {
     id: 'walnut',
@@ -529,7 +530,7 @@ export const INGREDIENT_DATABASE: Ingredient[] = [
     aliases: ['walnuts'],
     functionTags: ['tree nut'],
     concernLevel: 'none',
-    commonAllergenSource: 'Tree nuts',
+    allergenSources: ['Tree nuts'],
   },
   {
     id: 'pecan',
@@ -537,7 +538,7 @@ export const INGREDIENT_DATABASE: Ingredient[] = [
     aliases: ['pecans'],
     functionTags: ['tree nut'],
     concernLevel: 'none',
-    commonAllergenSource: 'Tree nuts',
+    allergenSources: ['Tree nuts'],
   },
   {
     id: 'hazelnut',
@@ -545,7 +546,7 @@ export const INGREDIENT_DATABASE: Ingredient[] = [
     aliases: ['hazelnuts', 'filbert'],
     functionTags: ['tree nut'],
     concernLevel: 'none',
-    commonAllergenSource: 'Tree nuts',
+    allergenSources: ['Tree nuts'],
   },
   {
     id: 'wheat-flour',
@@ -553,7 +554,7 @@ export const INGREDIENT_DATABASE: Ingredient[] = [
     aliases: ['enriched wheat flour', 'whole wheat flour', 'wheat', 'durum wheat'],
     functionTags: ['grain'],
     concernLevel: 'none',
-    commonAllergenSource: 'Wheat',
+    allergenSources: ['Wheat', 'Cereals containing gluten'],
     dietaryFlags: ['contains-gluten', 'high-fodmap'],
   },
   {
@@ -562,7 +563,7 @@ export const INGREDIENT_DATABASE: Ingredient[] = [
     aliases: ['gluten', 'wheat gluten'],
     functionTags: ['grain', 'protein'],
     concernLevel: 'none',
-    commonAllergenSource: 'Wheat',
+    allergenSources: ['Wheat', 'Cereals containing gluten'],
     dietaryFlags: ['contains-gluten'],
   },
   {
@@ -571,7 +572,7 @@ export const INGREDIENT_DATABASE: Ingredient[] = [
     aliases: ['soy', 'soybeans', 'soy protein', 'soy flour', 'textured vegetable protein'],
     functionTags: ['protein'],
     concernLevel: 'none',
-    commonAllergenSource: 'Soy',
+    allergenSources: ['Soy', 'Soybeans'],
     dietaryFlags: ['high-fodmap'],
   },
   {
@@ -580,7 +581,7 @@ export const INGREDIENT_DATABASE: Ingredient[] = [
     aliases: ['fish sauce', 'anchovy', 'anchovies', 'fish oil'],
     functionTags: ['protein'],
     concernLevel: 'none',
-    commonAllergenSource: 'Fish',
+    allergenSources: ['Fish'],
     dietaryFlags: ['not-vegan', 'not-vegetarian'],
   },
   {
@@ -589,7 +590,7 @@ export const INGREDIENT_DATABASE: Ingredient[] = [
     aliases: ['prawns', 'shellfish', 'crab', 'lobster'],
     functionTags: ['protein'],
     concernLevel: 'none',
-    commonAllergenSource: 'Shellfish',
+    allergenSources: ['Shellfish', 'Crustaceans'],
     dietaryFlags: ['not-vegan', 'not-vegetarian', 'not-kosher'],
   },
   {
@@ -598,7 +599,7 @@ export const INGREDIENT_DATABASE: Ingredient[] = [
     aliases: ['sesame seed', 'sesame oil', 'sesame flour', 'tahini'],
     functionTags: ['seed'],
     concernLevel: 'none',
-    commonAllergenSource: 'Sesame',
+    allergenSources: ['Sesame'],
   },
   {
     id: 'glucosamine',
@@ -606,9 +607,43 @@ export const INGREDIENT_DATABASE: Ingredient[] = [
     aliases: [],
     functionTags: ['supplement'],
     concernLevel: 'none',
-    commonAllergenSource: 'Glucosamine',
+    allergenSources: ['Glucosamine'],
     concernReason: 'Commonly manufactured from shellfish shells, though shellfish-free (vegan) sources also exist and aren’t distinguishable from the label alone.',
     dietaryFlags: ['not-vegan'],
+  },
+  {
+    id: 'celery',
+    name: 'Celery',
+    aliases: ['celery seed', 'celery salt', 'celeriac', 'celery extract'],
+    functionTags: ['vegetable', 'flavoring'],
+    concernLevel: 'none',
+    allergenSources: ['Celery'],
+  },
+  {
+    id: 'mustard',
+    name: 'Mustard',
+    aliases: ['mustard seed', 'mustard flour', 'mustard powder', 'dijon mustard'],
+    functionTags: ['flavoring', 'condiment'],
+    concernLevel: 'none',
+    allergenSources: ['Mustard'],
+  },
+  {
+    id: 'lupin',
+    name: 'Lupin',
+    aliases: ['lupin flour', 'lupine', 'lupini beans'],
+    functionTags: ['legume', 'protein'],
+    concernLevel: 'none',
+    allergenSources: ['Lupin'],
+    dietaryFlags: ['high-fodmap'],
+  },
+  {
+    id: 'mollusks',
+    name: 'Mollusks',
+    aliases: ['clams', 'mussels', 'oysters', 'scallops', 'squid', 'calamari', 'octopus', 'snails', 'escargot'],
+    functionTags: ['protein'],
+    concernLevel: 'none',
+    allergenSources: ['Molluscs'],
+    dietaryFlags: ['not-vegan', 'not-vegetarian', 'not-kosher'],
   },
 
   // ---- Whole foods / fiber (generally "good" ingredients) ---------------

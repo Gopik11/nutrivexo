@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Alert, Switch, Text, View } from 'react-native';
+import { Alert, Pressable, Switch, Text, View } from 'react-native';
 import { ScreenLayout } from '../../components/ScreenLayout';
 import { Card } from '../../components/ui';
 import { ChipSection } from '../../components/SelectableChip';
 import { strings } from '../../constants/strings';
 import { useAppStore } from '../../store/useAppStore';
+import type { Region } from '../../types';
 import {
   cancelWeeklyDigest,
   requestNotificationPermission,
@@ -52,7 +53,21 @@ export function SettingsScreen({ navigation }: Props) {
   );
   const healthProfileDraft = useAppStore((state) => state.healthProfileDraft);
   const toggleMutedAmbiguousAllergen = useAppStore((state) => state.toggleMutedAmbiguousAllergen);
+  const region = useAppStore((state) => state.settings.region ?? 'US');
+  const setRegion = useAppStore((state) => state.setRegion);
   const [busy, setBusy] = useState(false);
+
+  const handleChangeRegion = (next: Region) => {
+    if (next === region) return;
+    Alert.alert(
+      next === 'EU' ? 'Switch to the EU’s 14 allergens?' : 'Switch to the US’s 9 allergens?',
+      'Your existing allergy selections carry over where the categories match (e.g. Wheat ↔ Cereals containing gluten). Nutrition guidance also switches to match.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Switch', onPress: () => setRegion(next) },
+      ]
+    );
+  };
 
   const handleToggleNotifications = async (value: boolean) => {
     if (!value) {
@@ -115,6 +130,31 @@ export function SettingsScreen({ navigation }: Props) {
           onValueChange={(value) => updateSettings({ highConcernAlertsEnabled: value })}
           disabled={busy || !settings.notificationsEnabled}
         />
+      </Card>
+
+      <Card variant="outlined" className="mb-4">
+        <Text className="text-body text-neutral-800 font-medium mb-1">Region</Text>
+        <Text className="text-caption text-neutral-500 mb-3">
+          Which allergen list and nutrition guidance Nutrivexo uses — the US's 9 major
+          allergens and %DV-style thresholds, or the EU's 14 (Regulation 1169/2011) with
+          EU reference-intake-style thresholds.
+        </Text>
+        <View className="flex-row bg-neutral-100 rounded-full p-1 self-start">
+          {(['US', 'EU'] as const).map((option) => (
+            <Pressable
+              key={option}
+              accessibilityRole="radio"
+              accessibilityState={{ checked: region === option }}
+              accessibilityLabel={`${option} region`}
+              onPress={() => handleChangeRegion(option)}
+              className={['px-4 py-1.5 rounded-full', region === option ? 'bg-accent-500' : ''].join(' ')}
+            >
+              <Text className={region === option ? 'text-white font-semibold' : 'text-neutral-600'}>
+                {option}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
       </Card>
 
       {healthProfileDraft.allergies.length > 0 && (

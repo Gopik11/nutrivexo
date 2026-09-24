@@ -99,7 +99,8 @@ export function ResultsScreen({ route, navigation }: Props) {
     findSwapCandidates(
       { product: view.product, score: view.score },
       healthProfileDraft,
-      useAppStore.getState().settings.mutedAmbiguousAllergens
+      useAppStore.getState().settings.mutedAmbiguousAllergens,
+      useAppStore.getState().settings.region
     )
       .then((results) => {
         if (!cancelled) setSwapCandidates(results);
