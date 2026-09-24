@@ -44,6 +44,14 @@ const tierConfig: Record<
     titleClass: 'text-accent-700',
     messageClass: 'text-neutral-700',
   },
+  dietary_conflict: {
+    label: strings.components.alertBanner.dietaryConflict,
+    icon: 'leaf',
+    containerClass: 'bg-score-moderate-bg border-score-moderate',
+    iconColor: '#D4A24C',
+    titleClass: 'text-score-moderate',
+    messageClass: 'text-neutral-700',
+  },
 };
 
 export function AlertBanner({ tier, title, message }: AlertBannerProps) {

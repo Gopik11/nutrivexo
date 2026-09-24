@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Alert, Switch, Text, View } from 'react-native';
 import { ScreenLayout } from '../../components/ScreenLayout';
 import { Card } from '../../components/ui';
+import { ChipSection } from '../../components/SelectableChip';
 import { strings } from '../../constants/strings';
 import { useAppStore } from '../../store/useAppStore';
 import {
@@ -49,6 +50,8 @@ export function SettingsScreen({ navigation }: Props) {
   const setNotificationsPermissionGranted = useAppStore(
     (state) => state.setNotificationsPermissionGranted
   );
+  const healthProfileDraft = useAppStore((state) => state.healthProfileDraft);
+  const toggleMutedAmbiguousAllergen = useAppStore((state) => state.toggleMutedAmbiguousAllergen);
   const [busy, setBusy] = useState(false);
 
   const handleToggleNotifications = async (value: boolean) => {
@@ -113,6 +116,18 @@ export function SettingsScreen({ navigation }: Props) {
           disabled={busy || !settings.notificationsEnabled}
         />
       </Card>
+
+      {healthProfileDraft.allergies.length > 0 && (
+        <Card variant="outlined" className="mb-4">
+          <ChipSection
+            title={strings.settings.ambiguousAlerts}
+            subtitle={strings.settings.ambiguousAlertsDesc}
+            options={healthProfileDraft.allergies}
+            selected={settings.mutedAmbiguousAllergens ?? []}
+            onToggle={toggleMutedAmbiguousAllergen}
+          />
+        </Card>
+      )}
     </ScreenLayout>
   );
 }

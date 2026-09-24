@@ -30,7 +30,13 @@ interface AppState {
     >,
     item: string
   ) => void;
-  setDietaryPattern: (pattern: string) => void;
+  /**
+   * Dietary patterns are multi-select (someone can be vegetarian AND low-sodium),
+   * except "No specific pattern" is exclusive of every other option: picking it
+   * clears the rest, and picking anything else clears it.
+   */
+  toggleDietaryPattern: (pattern: string) => void;
+  toggleMutedAmbiguousAllergen: (allergen: string) => void;
   completeOnboarding: () => void;
   resetOnboarding: () => void;
 
@@ -41,10 +47,12 @@ interface AppState {
   clearAllData: () => void;
 }
 
+const NO_SPECIFIC_PATTERN = 'No specific pattern';
+
 const defaultHealthProfileDraft: OnboardingHealthProfileDraft = {
   allergies: [],
   medicalConditions: [],
-  dietaryPattern: 'No specific pattern',
+  dietaryPatterns: [NO_SPECIFIC_PATTERN],
   healthGoals: [],
 };
 
@@ -52,6 +60,7 @@ const defaultSettings: AppSettings = {
   notificationsEnabled: false,
   weeklyDigestEnabled: false,
   highConcernAlertsEnabled: true,
+  mutedAmbiguousAllergens: [],
 };
 
 function toSavedScan(analysis: AnalysisResult): SavedScan {
@@ -66,6 +75,7 @@ function toSavedScan(analysis: AnalysisResult): SavedScan {
     matchedIngredientNames: analysis.matchedIngredients.map((m) => m.ingredient.name),
     unmatchedTerms: analysis.unmatchedTerms,
     scoreFactors: analysis.scoreFactors,
+    lowConfidence: analysis.lowConfidence,
   };
 }
 
@@ -101,10 +111,26 @@ export const useAppStore = create<AppState>()(
         set({ healthProfileDraft: { ...get().healthProfileDraft, [field]: next } });
       },
 
-      setDietaryPattern: (pattern) =>
-        set({
-          healthProfileDraft: { ...get().healthProfileDraft, dietaryPattern: pattern },
-        }),
+      toggleDietaryPattern: (pattern) => {
+        const current = get().healthProfileDraft.dietaryPatterns;
+        let next: string[];
+        if (pattern === NO_SPECIFIC_PATTERN) {
+          next = current.includes(NO_SPECIFIC_PATTERN) ? [] : [NO_SPECIFIC_PATTERN];
+        } else if (current.includes(pattern)) {
+          next = current.filter((value) => value !== pattern);
+        } else {
+          next = [...current.filter((value) => value !== NO_SPECIFIC_PATTERN), pattern];
+        }
+        set({ healthProfileDraft: { ...get().healthProfileDraft, dietaryPatterns: next } });
+      },
+
+      toggleMutedAmbiguousAllergen: (allergen) => {
+        const current = get().settings.mutedAmbiguousAllergens ?? [];
+        const next = current.includes(allergen)
+          ? current.filter((value) => value !== allergen)
+          : [...current, allergen];
+        set({ settings: { ...get().settings, mutedAmbiguousAllergens: next } });
+      },
 
       completeOnboarding: () => set({ hasCompletedOnboarding: true }),
 

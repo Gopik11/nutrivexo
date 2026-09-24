@@ -24,6 +24,11 @@ const dataPoints = [
     title: 'Label photos',
     body: 'Processed on-device to read text, then discarded — photos are never saved or uploaded.',
   },
+  {
+    icon: 'barcode-outline' as const,
+    title: 'Barcode lookups',
+    body: 'Scanning a barcode sends only that number to Open Food Facts, an independent open database, to fetch the product’s name and ingredients. Nothing else about you is sent.',
+  },
 ];
 
 export function DataPrivacyScreen({ navigation }: Props) {

@@ -60,7 +60,7 @@ export function ProfileScreen({ navigation }: MainTabScreenProps<'Profile'>) {
           )}
         </View>
         <Text className="text-body-sm text-neutral-500 mt-3">
-          Pattern: {healthProfileDraft.dietaryPattern}
+          Pattern: {healthProfileDraft.dietaryPatterns.join(', ') || 'No specific pattern'}
         </Text>
         {healthProfileDraft.healthGoals.length > 0 && (
           <View className="flex-row flex-wrap gap-2 mt-3">

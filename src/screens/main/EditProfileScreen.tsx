@@ -10,7 +10,7 @@ type Props = MainStackScreenProps<'EditProfile'>;
 export function EditProfileScreen({ navigation }: Props) {
   const healthProfileDraft = useAppStore((state) => state.healthProfileDraft);
   const toggleHealthProfileItem = useAppStore((state) => state.toggleHealthProfileItem);
-  const setDietaryPattern = useAppStore((state) => state.setDietaryPattern);
+  const toggleDietaryPattern = useAppStore((state) => state.toggleDietaryPattern);
 
   return (
     <ScreenLayout
@@ -39,9 +39,8 @@ export function EditProfileScreen({ navigation }: Props) {
         title={strings.onboarding.healthProfile.dietaryPattern.title}
         subtitle={strings.onboarding.healthProfile.dietaryPattern.subtitle}
         options={strings.onboarding.healthProfile.dietaryPattern.options}
-        selected={[healthProfileDraft.dietaryPattern]}
-        onToggle={(item) => setDietaryPattern(item)}
-        singleSelect
+        selected={healthProfileDraft.dietaryPatterns}
+        onToggle={(item) => toggleDietaryPattern(item)}
       />
 
       <ChipSection

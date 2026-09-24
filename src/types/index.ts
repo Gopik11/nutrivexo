@@ -18,11 +18,26 @@ export type HealthGoal =
 
 export type ConcernLevel = 'none' | 'low' | 'moderate' | 'high';
 
-export type ProductSource = 'scanned' | 'lookup';
+export type ProductSource = 'scanned' | 'lookup' | 'barcode';
 
 export type RecommendationType = 'swap' | 'portion' | 'education';
 
-export type AllergenTier = 'contains' | 'may_contain' | 'cross_reactive';
+export type AllergenTier = 'contains' | 'may_contain' | 'cross_reactive' | 'dietary_conflict';
+
+/**
+ * Dietary-pattern conflict markers, independent of the 9-allergen alert system.
+ * An ingredient can carry several — e.g. gelatin is not-vegan, not-vegetarian,
+ * not-halal, and not-kosher all at once. Left off an ingredient when the real
+ * answer is genuinely ambiguous (e.g. sourcing-dependent) rather than guessed.
+ */
+export type DietaryFlag =
+  | 'not-vegan'
+  | 'not-vegetarian'
+  | 'contains-gluten'
+  | 'contains-lactose'
+  | 'high-fodmap'
+  | 'not-halal'
+  | 'not-kosher';
 
 export interface DailyTargets {
   calories?: number;
@@ -61,6 +76,8 @@ export interface Ingredient {
    * "may contain" caution rather than a "may contain <this allergen>" alert.
    */
   ambiguousAllergenRisk?: boolean;
+  /** Dietary-pattern conflicts this ingredient carries (vegan, halal, gluten, etc). */
+  dietaryFlags?: DietaryFlag[];
 }
 
 export interface NutritionFacts {
@@ -113,7 +130,8 @@ export interface Recommendation {
 export interface OnboardingHealthProfileDraft {
   allergies: string[];
   medicalConditions: string[];
-  dietaryPattern: string;
+  /** Multi-select: a person can be e.g. both vegetarian and low-sodium at once. */
+  dietaryPatterns: string[];
   healthGoals: string[];
 }
 
@@ -134,6 +152,12 @@ export interface AnalysisResult {
   matchedIngredients: MatchedIngredient[];
   unmatchedTerms: string[];
   scoreFactors: ScoreFactor[];
+  /**
+   * True when too little of the label could be matched/parsed to trust the score
+   * (e.g. mostly unmatched terms, no nutrition facts found). The UI should show an
+   * explicit "not enough data" state instead of presenting the score as reliable.
+   */
+  lowConfidence?: boolean;
 }
 
 export interface ScoreFactor {
@@ -155,10 +179,17 @@ export interface SavedScan {
   matchedIngredientNames: string[];
   unmatchedTerms: string[];
   scoreFactors: ScoreFactor[];
+  lowConfidence?: boolean;
 }
 
 export interface AppSettings {
   notificationsEnabled: boolean;
   weeklyDigestEnabled: boolean;
   highConcernAlertsEnabled: boolean;
+  /**
+   * Allergen names for which the user has opted out of "may contain" caution
+   * alerts driven by `ambiguousAllergenRisk` ingredients (e.g. "natural flavors").
+   * Direct "contains" alerts and dietary-conflict alerts are never muted.
+   */
+  mutedAmbiguousAllergens?: string[];
 }

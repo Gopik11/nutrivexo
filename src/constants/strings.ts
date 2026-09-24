@@ -57,7 +57,7 @@ export const strings = {
       },
       dietaryPattern: {
         title: 'Dietary pattern',
-        subtitle: 'How you generally like to eat.',
+        subtitle: 'How you generally like to eat — pick as many as apply.',
         options: [
           'No specific pattern',
           'Vegetarian',
@@ -67,6 +67,9 @@ export const strings = {
           'Low sodium',
           'Low sugar',
           'Keto',
+          'Halal',
+          'Kosher',
+          'Low FODMAP',
         ],
       },
       goals: {
@@ -127,6 +130,7 @@ export const strings = {
     title: 'Scan a label',
     subtitle: 'Point your camera at the ingredient list. We will guide you to a clear capture.',
     modeCamera: 'Camera',
+    modeBarcode: 'Barcode',
     modeManual: 'Type it in',
     productNameLabel: 'Product name (optional)',
     productNamePlaceholder: 'e.g. Whole grain crackers',
@@ -146,6 +150,14 @@ export const strings = {
     noTextFound: 'We couldn’t find any ingredient text. Try again or type it in manually.',
     tryAgain: 'Try again',
     typeInstead: 'Type instead',
+    barcodeInstructions: 'Point your camera at the barcode.',
+    barcodeLookingUp: 'Looking up product…',
+    barcodeNotFound:
+      'We couldn’t find this product in the Open Food Facts database. Try the camera or type it in instead.',
+    barcodeLookupFailed:
+      'We couldn’t reach the product database — check your connection and try again, or type the ingredients in instead.',
+    barcodeNoIngredients:
+      'We found this product, but its ingredient list isn’t in the database yet. Try the camera or type it in instead.',
   },
 
   results: {
@@ -161,6 +173,12 @@ export const strings = {
       'These terms weren’t recognized — they’re not necessarily concerning, we just don’t have data on them yet.',
     disclaimer: 'General wellness information, not medical advice.',
     delete: 'Delete',
+    lowConfidenceTitle: 'Not enough data to score this',
+    lowConfidenceBody:
+      'We couldn’t recognize enough of this label to give a reliable score. Try a clearer photo, or type the ingredients in manually.',
+    betterAlternatives: 'Better alternatives nearby',
+    betterAlternativesLoading: 'Looking for better alternatives…',
+    betterAlternativesSubtitle: 'Other products in this category that score higher for you, from Open Food Facts.',
   },
 
   settings: {
@@ -173,12 +191,15 @@ export const strings = {
     highConcernAlerts: 'High-concern alerts',
     highConcernAlertsDesc:
       'Notify me right away when a saved scan matches one of my allergies.',
+    ambiguousAlerts: 'Ambiguous-ingredient alerts',
+    ambiguousAlertsDesc:
+      'Mute "may contain" cautions for specific allergies triggered by unspecified flavors or spices. Direct matches are never muted.',
   },
 
   dataPrivacy: {
     title: 'Data & privacy',
     intro:
-      'Nutrivexo runs entirely on your device. Nothing you scan or enter is sent to a server — all analysis happens locally, and your data stays on this phone unless you delete the app.',
+      'Nutrivexo runs almost entirely on your device. Camera and manual scans are analyzed fully locally — nothing about them is sent anywhere. The one exception is barcode lookup: scanning a barcode sends that barcode number (nothing else about you) to Open Food Facts, an independent open database, to fetch the product’s name and ingredients. Your health profile and scan history always stay on this phone unless you delete the app.',
     storedHeading: 'What’s stored on this device',
     deleteHeading: 'Delete your data',
     deleteBody: 'Permanently erase your health profile and scan history from this device.',
@@ -216,6 +237,7 @@ export const strings = {
       contains: 'Contains',
       mayContain: 'May contain',
       crossReactive: 'Cross-reactive',
+      dietaryConflict: "Doesn't fit your diet",
     },
   },
 } as const;

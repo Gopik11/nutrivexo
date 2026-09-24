@@ -35,6 +35,7 @@ export const INGREDIENT_DATABASE: Ingredient[] = [
     functionTags: ['sweetener', 'added sugar', 'ultra-processed marker'],
     concernLevel: 'high',
     concernReason: 'A concentrated added sugar strongly linked to excess calorie intake; common in a healthy-eating goal to reduce.',
+    dietaryFlags: ['high-fodmap'],
   },
   {
     id: 'dextrose',
@@ -59,6 +60,7 @@ export const INGREDIENT_DATABASE: Ingredient[] = [
     functionTags: ['sweetener', 'added sugar'],
     concernLevel: 'low',
     concernReason: 'Still an added sugar nutritionally, though less processed than refined sugar.',
+    dietaryFlags: ['not-vegan', 'high-fodmap'],
   },
   {
     id: 'agave',
@@ -67,6 +69,7 @@ export const INGREDIENT_DATABASE: Ingredient[] = [
     functionTags: ['sweetener', 'added sugar'],
     concernLevel: 'moderate',
     concernReason: 'Very high in fructose relative to other sweeteners.',
+    dietaryFlags: ['high-fodmap'],
   },
   {
     id: 'molasses',
@@ -130,6 +133,7 @@ export const INGREDIENT_DATABASE: Ingredient[] = [
     functionTags: ['sugar alcohol'],
     concernLevel: 'low',
     concernReason: 'A sugar alcohol that can cause digestive upset in larger amounts, especially for sensitive guts.',
+    dietaryFlags: ['high-fodmap'],
   },
   {
     id: 'xylitol',
@@ -138,6 +142,7 @@ export const INGREDIENT_DATABASE: Ingredient[] = [
     functionTags: ['sugar alcohol'],
     concernLevel: 'low',
     concernReason: 'A sugar alcohol; safe for people, but toxic to dogs — worth knowing if you have pets.',
+    dietaryFlags: ['high-fodmap'],
   },
   {
     id: 'erythritol',
@@ -420,6 +425,7 @@ export const INGREDIENT_DATABASE: Ingredient[] = [
     aliases: [],
     functionTags: ['thickener', 'protein'],
     concernLevel: 'none',
+    dietaryFlags: ['not-vegan', 'not-vegetarian', 'not-halal', 'not-kosher'],
   },
 
   // ---- Sodium sources --------------------------------------------------
@@ -455,6 +461,7 @@ export const INGREDIENT_DATABASE: Ingredient[] = [
     functionTags: ['dairy', 'protein'],
     concernLevel: 'none',
     commonAllergenSource: 'Milk',
+    dietaryFlags: ['not-vegan', 'contains-lactose'],
   },
   {
     id: 'whey',
@@ -463,6 +470,7 @@ export const INGREDIENT_DATABASE: Ingredient[] = [
     functionTags: ['dairy', 'protein'],
     concernLevel: 'none',
     commonAllergenSource: 'Milk',
+    dietaryFlags: ['not-vegan', 'contains-lactose'],
   },
   {
     id: 'casein',
@@ -471,6 +479,7 @@ export const INGREDIENT_DATABASE: Ingredient[] = [
     functionTags: ['dairy', 'protein'],
     concernLevel: 'none',
     commonAllergenSource: 'Milk',
+    dietaryFlags: ['not-vegan', 'contains-lactose'],
   },
   {
     id: 'butter',
@@ -479,6 +488,7 @@ export const INGREDIENT_DATABASE: Ingredient[] = [
     functionTags: ['dairy', 'fat', 'saturated fat'],
     concernLevel: 'low',
     commonAllergenSource: 'Milk',
+    dietaryFlags: ['not-vegan', 'contains-lactose'],
   },
   {
     id: 'egg',
@@ -487,6 +497,7 @@ export const INGREDIENT_DATABASE: Ingredient[] = [
     functionTags: ['protein'],
     concernLevel: 'none',
     commonAllergenSource: 'Eggs',
+    dietaryFlags: ['not-vegan'],
   },
   {
     id: 'peanut',
@@ -543,6 +554,7 @@ export const INGREDIENT_DATABASE: Ingredient[] = [
     functionTags: ['grain'],
     concernLevel: 'none',
     commonAllergenSource: 'Wheat',
+    dietaryFlags: ['contains-gluten', 'high-fodmap'],
   },
   {
     id: 'vital-wheat-gluten',
@@ -551,6 +563,7 @@ export const INGREDIENT_DATABASE: Ingredient[] = [
     functionTags: ['grain', 'protein'],
     concernLevel: 'none',
     commonAllergenSource: 'Wheat',
+    dietaryFlags: ['contains-gluten'],
   },
   {
     id: 'soybean',
@@ -559,6 +572,7 @@ export const INGREDIENT_DATABASE: Ingredient[] = [
     functionTags: ['protein'],
     concernLevel: 'none',
     commonAllergenSource: 'Soy',
+    dietaryFlags: ['high-fodmap'],
   },
   {
     id: 'fish',
@@ -567,6 +581,7 @@ export const INGREDIENT_DATABASE: Ingredient[] = [
     functionTags: ['protein'],
     concernLevel: 'none',
     commonAllergenSource: 'Fish',
+    dietaryFlags: ['not-vegan', 'not-vegetarian'],
   },
   {
     id: 'shrimp',
@@ -575,6 +590,7 @@ export const INGREDIENT_DATABASE: Ingredient[] = [
     functionTags: ['protein'],
     concernLevel: 'none',
     commonAllergenSource: 'Shellfish',
+    dietaryFlags: ['not-vegan', 'not-vegetarian', 'not-kosher'],
   },
   {
     id: 'sesame',
@@ -591,6 +607,8 @@ export const INGREDIENT_DATABASE: Ingredient[] = [
     functionTags: ['supplement'],
     concernLevel: 'none',
     commonAllergenSource: 'Glucosamine',
+    concernReason: 'Commonly manufactured from shellfish shells, though shellfish-free (vegan) sources also exist and aren’t distinguishable from the label alone.',
+    dietaryFlags: ['not-vegan'],
   },
 
   // ---- Whole foods / fiber (generally "good" ingredients) ---------------
@@ -621,6 +639,7 @@ export const INGREDIENT_DATABASE: Ingredient[] = [
     aliases: ['lentil flour'],
     functionTags: ['legume', 'protein', 'fiber'],
     concernLevel: 'none',
+    dietaryFlags: ['high-fodmap'],
   },
   {
     id: 'chickpeas',
@@ -628,6 +647,7 @@ export const INGREDIENT_DATABASE: Ingredient[] = [
     aliases: ['garbanzo beans', 'chickpea flour'],
     functionTags: ['legume', 'protein', 'fiber'],
     concernLevel: 'none',
+    dietaryFlags: ['high-fodmap'],
   },
   {
     id: 'flaxseed',
@@ -650,6 +670,7 @@ export const INGREDIENT_DATABASE: Ingredient[] = [
     functionTags: ['fiber', 'prebiotic'],
     concernLevel: 'low',
     concernReason: 'Generally beneficial as a fiber source, though large amounts can cause bloating in sensitive people.',
+    dietaryFlags: ['high-fodmap'],
   },
   {
     id: 'psyllium-husk',

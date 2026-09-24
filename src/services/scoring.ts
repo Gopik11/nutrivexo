@@ -3,12 +3,30 @@ import { getScoreLevel } from '../constants/theme';
 import type {
   AllergenAlert,
   ConcernLevel,
+  DietaryFlag,
   MatchedIngredient,
   NutritionFacts,
   OnboardingHealthProfileDraft,
   Recommendation,
   ScoreFactor,
 } from '../types';
+
+/**
+ * Maps a dietary-pattern option (as shown in onboarding/settings) to the
+ * ingredient-level DietaryFlag it conflicts with. Patterns not listed here
+ * (Pescatarian, Low sodium, Low sugar, Keto) either aren't distinguishable
+ * with our current flag granularity (e.g. Pescatarian allows fish/shellfish,
+ * which our "not-vegetarian" flag doesn't separate from other meats) or are
+ * already handled via nutrition-fact scoring rather than ingredient flags.
+ */
+const DIETARY_PATTERN_TO_FLAG: Record<string, DietaryFlag> = {
+  Vegetarian: 'not-vegetarian',
+  Vegan: 'not-vegan',
+  'Gluten-free': 'contains-gluten',
+  Halal: 'not-halal',
+  Kosher: 'not-kosher',
+  'Low FODMAP': 'high-fodmap',
+};
 
 const CONCERN_PENALTY: Record<ConcernLevel, number> = {
   none: 0,
@@ -24,6 +42,8 @@ export interface ScoringInput {
   matchedIngredients: MatchedIngredient[];
   nutritionFacts?: NutritionFacts;
   healthProfile: OnboardingHealthProfileDraft;
+  /** Allergens the user has muted from ambiguous ("may contain") alerts, via Settings. */
+  mutedAmbiguousAllergens?: string[];
 }
 
 export interface ScoringOutput {
@@ -36,19 +56,20 @@ export interface ScoringOutput {
 
 function buildAllergenAlerts(
   matchedIngredients: MatchedIngredient[],
-  allergies: string[]
+  allergies: string[],
+  mutedAmbiguousAllergens: string[] = []
 ): AllergenAlert[] {
   const alerts: AllergenAlert[] = [];
   const userAllergens = allergies.filter(isKnownAllergen) as KnownAllergen[];
   if (userAllergens.length === 0) return alerts;
 
   const seen = new Set<string>();
-  let hasAmbiguousIngredient = false;
+  const ambiguousIngredientNames = new Set<string>();
 
   for (const match of matchedIngredients) {
     const { ingredient } = match;
     if (ingredient.ambiguousAllergenRisk) {
-      hasAmbiguousIngredient = true;
+      ambiguousIngredientNames.add(ingredient.name);
     }
 
     const source = ingredient.commonAllergenSource;
@@ -85,24 +106,76 @@ function buildAllergenAlerts(
     }
   }
 
-  if (hasAmbiguousIngredient) {
-    alerts.push({
-      tier: 'may_contain',
-      allergen: userAllergens.join(', '),
-      ingredientName: 'Natural/artificial flavors or spices',
-      message:
-        'This label lists unspecified flavors or spices, which occasionally hide allergen sources. Consider contacting the manufacturer if you react strongly.',
-    });
+  if (ambiguousIngredientNames.size > 0) {
+    // Alert-fatigue guard: a user can mute "may contain" cautions per-allergen in
+    // Settings (unlike direct "contains"/cross-reactive alerts, which are never
+    // muted). If every one of the user's allergens is muted, skip the alert.
+    const activeAllergens = userAllergens.filter(
+      (allergen) => !mutedAmbiguousAllergens.includes(allergen)
+    );
+    if (activeAllergens.length > 0) {
+      const ingredientNames = Array.from(ambiguousIngredientNames);
+      alerts.push({
+        tier: 'may_contain',
+        allergen: activeAllergens.join(', '),
+        ingredientName: ingredientNames.join(', '),
+        message: `This label lists unspecified flavors or spices (${ingredientNames.join(', ')}), which occasionally hide allergen sources like ${activeAllergens.join(', ').toLowerCase()}. Consider contacting the manufacturer if you react strongly.`,
+      });
+    }
   }
 
-  // "contains" alerts are most urgent — surface them first.
-  const tierOrder: Record<AllergenAlert['tier'], number> = {
-    contains: 0,
-    cross_reactive: 1,
-    may_contain: 2,
-  };
-  return alerts.sort((a, b) => tierOrder[a.tier] - tierOrder[b.tier]);
+  return alerts;
 }
+
+/**
+ * Checks matched ingredients against the user's selected dietary patterns
+ * (vegan, halal, gluten-free, etc) and surfaces a conflict alert for each
+ * ingredient that doesn't fit — independent of the 9-allergen alert system.
+ */
+function buildDietaryConflictAlerts(
+  matchedIngredients: MatchedIngredient[],
+  dietaryPatterns: string[]
+): AllergenAlert[] {
+  const alerts: AllergenAlert[] = [];
+  const patternsByFlag = new Map<DietaryFlag, string[]>();
+  for (const pattern of dietaryPatterns) {
+    const flag = DIETARY_PATTERN_TO_FLAG[pattern];
+    if (!flag) continue;
+    const existing = patternsByFlag.get(flag);
+    if (existing) existing.push(pattern);
+    else patternsByFlag.set(flag, [pattern]);
+  }
+  if (patternsByFlag.size === 0) return alerts;
+
+  const seen = new Set<string>();
+  for (const match of matchedIngredients) {
+    const flags = match.ingredient.dietaryFlags;
+    if (!flags) continue;
+    for (const flag of flags) {
+      const patterns = patternsByFlag.get(flag);
+      if (!patterns) continue;
+      const key = `${flag}:${match.ingredient.id}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const patternLabel = patterns.join(' / ');
+      alerts.push({
+        tier: 'dietary_conflict',
+        allergen: patternLabel,
+        ingredientName: match.ingredient.name,
+        message: `${match.ingredient.name} doesn't fit a ${patternLabel.toLowerCase()} diet.`,
+      });
+    }
+  }
+  return alerts;
+}
+
+// "contains" alerts are most urgent — surface them first.
+const TIER_ORDER: Record<AllergenAlert['tier'], number> = {
+  contains: 0,
+  dietary_conflict: 1,
+  cross_reactive: 2,
+  may_contain: 3,
+};
 
 function buildNutritionFactors(
   facts: NutritionFacts | undefined,
@@ -253,6 +326,7 @@ function buildAllergyScoreFactors(alerts: AllergenAlert[]): ScoreFactor[] {
   const containsCount = alerts.filter((a) => a.tier === 'contains').length;
   const crossCount = alerts.filter((a) => a.tier === 'cross_reactive').length;
   const mayContainCount = alerts.filter((a) => a.tier === 'may_contain').length;
+  const dietaryConflictCount = alerts.filter((a) => a.tier === 'dietary_conflict').length;
 
   if (containsCount > 0) {
     factors.push({
@@ -276,6 +350,14 @@ function buildAllergyScoreFactors(alerts: AllergenAlert[]): ScoreFactor[] {
       detail: 'Unspecified flavors or spices could hide an allergen.',
       impact: 'negative',
       points: -5,
+    });
+  }
+  if (dietaryConflictCount > 0) {
+    factors.push({
+      label: "Doesn't fit your diet",
+      detail: `${dietaryConflictCount} ingredient${dietaryConflictCount > 1 ? 's' : ''} conflict with a dietary pattern on your profile.`,
+      impact: 'negative',
+      points: -10 * dietaryConflictCount,
     });
   }
   return factors;
@@ -333,9 +415,21 @@ function buildRecommendations(
 }
 
 export function analyzeScan(input: ScoringInput): ScoringOutput {
-  const { matchedIngredients, nutritionFacts, healthProfile } = input;
+  const { matchedIngredients, nutritionFacts, healthProfile, mutedAmbiguousAllergens = [] } =
+    input;
 
-  const alerts = buildAllergenAlerts(matchedIngredients, healthProfile.allergies);
+  const allergenAlerts = buildAllergenAlerts(
+    matchedIngredients,
+    healthProfile.allergies,
+    mutedAmbiguousAllergens
+  );
+  const dietaryConflictAlerts = buildDietaryConflictAlerts(
+    matchedIngredients,
+    healthProfile.dietaryPatterns
+  );
+  const alerts = [...allergenAlerts, ...dietaryConflictAlerts].sort(
+    (a, b) => TIER_ORDER[a.tier] - TIER_ORDER[b.tier]
+  );
   const ingredientFactors = buildIngredientFactors(matchedIngredients);
   const nutritionFactors = buildNutritionFactors(nutritionFacts, healthProfile.healthGoals);
   const allergyFactors = buildAllergyScoreFactors(alerts);

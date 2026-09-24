@@ -1,11 +1,12 @@
-import { useMemo, useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { AlertBanner, Badge, Button, Card, ScoreRing } from '../../components/ui';
+import { AlertBanner, Badge, Button, Card, ScoreRing, scoreLevelToBadgeVariant } from '../../components/ui';
 import { strings } from '../../constants/strings';
 import { useAppStore } from '../../store/useAppStore';
 import { sendHighConcernAlert } from '../../services/notifications';
+import { findSwapCandidates, type SwapCandidate } from '../../services/swapCatalog';
 import type { MainStackScreenProps } from '../../navigation/types';
 import type { AllergenAlert, Recommendation, ScoreFactor, SavedScan } from '../../types';
 
@@ -46,10 +47,14 @@ export function ResultsScreen({ route, navigation }: Props) {
     : undefined;
 
   const [justSaved, setJustSaved] = useState<SavedScan | null>(null);
+  const [swapCandidates, setSwapCandidates] = useState<SwapCandidate[]>([]);
+  const [loadingSwaps, setLoadingSwaps] = useState(false);
+  const healthProfileDraft = useAppStore((state) => state.healthProfileDraft);
 
   const view = useMemo(() => {
     if (isFromHistory && historyScan) {
       return {
+        product: historyScan.product,
         productName: historyScan.product.name,
         score: historyScan.score,
         alerts: historyScan.alerts,
@@ -58,11 +63,13 @@ export function ResultsScreen({ route, navigation }: Props) {
         ingredientNames: historyScan.matchedIngredientNames,
         unmatchedTerms: historyScan.unmatchedTerms,
         nutritionFacts: historyScan.product.nutritionFacts,
+        lowConfidence: historyScan.lowConfidence ?? false,
       };
     }
     if ('analysis' in params) {
       const { analysis } = params;
       return {
+        product: analysis.product,
         productName: analysis.product.name,
         score: analysis.score,
         alerts: analysis.alerts,
@@ -71,10 +78,40 @@ export function ResultsScreen({ route, navigation }: Props) {
         ingredientNames: analysis.matchedIngredients.map((m) => m.ingredient.name),
         unmatchedTerms: analysis.unmatchedTerms,
         nutritionFacts: analysis.product.nutritionFacts,
+        lowConfidence: analysis.lowConfidence ?? false,
       };
     }
     return null;
   }, [isFromHistory, historyScan, params]);
+
+  useEffect(() => {
+    if (!view || view.product.source !== 'barcode' || !view.product.category) {
+      setSwapCandidates([]);
+      return;
+    }
+    // Only worth surfacing alternatives when this product itself isn't already a good pick.
+    if (view.score >= 75 && view.alerts.length === 0) {
+      setSwapCandidates([]);
+      return;
+    }
+    let cancelled = false;
+    setLoadingSwaps(true);
+    findSwapCandidates(
+      { product: view.product, score: view.score },
+      healthProfileDraft,
+      useAppStore.getState().settings.mutedAmbiguousAllergens
+    )
+      .then((results) => {
+        if (!cancelled) setSwapCandidates(results);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingSwaps(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view?.product.barcode, view?.product.source, view?.product.category]);
 
   if (!view) {
     return (
@@ -145,9 +182,21 @@ export function ResultsScreen({ route, navigation }: Props) {
             : ''}
         </Text>
 
-        <Card variant="outlined" className="items-center py-8 mb-4">
-          <ScoreRing score={view.score} size={128} />
-        </Card>
+        {view.lowConfidence ? (
+          <Card variant="outlined" className="items-center py-8 mb-4">
+            <Ionicons name="help-circle-outline" size={40} color="#A89F92" />
+            <Text className="text-h3 text-neutral-800 text-center mt-3 mb-1">
+              {strings.results.lowConfidenceTitle}
+            </Text>
+            <Text className="text-body-sm text-neutral-500 text-center">
+              {strings.results.lowConfidenceBody}
+            </Text>
+          </Card>
+        ) : (
+          <Card variant="outlined" className="items-center py-8 mb-4">
+            <ScoreRing score={view.score} size={128} />
+          </Card>
+        )}
 
         {view.alerts.length > 0 && (
           <View className="mb-4" style={{ gap: 10 }}>
@@ -174,6 +223,45 @@ export function ResultsScreen({ route, navigation }: Props) {
                 <Text className="text-body-sm text-neutral-700 flex-1 ml-2.5">{rec.content}</Text>
               </View>
             ))}
+          </Card>
+        )}
+
+        {(loadingSwaps || swapCandidates.length > 0) && (
+          <Card variant="outlined" className="mb-4">
+            <Text className="text-h3 text-neutral-800 mb-1">{strings.results.betterAlternatives}</Text>
+            {loadingSwaps ? (
+              <View className="flex-row items-center py-3">
+                <ActivityIndicator color="#A8734F" />
+                <Text className="text-body-sm text-neutral-500 ml-3">
+                  {strings.results.betterAlternativesLoading}
+                </Text>
+              </View>
+            ) : (
+              <>
+                <Text className="text-caption text-neutral-500 mb-3">
+                  {strings.results.betterAlternativesSubtitle}
+                </Text>
+                {swapCandidates.map((candidate) => (
+                  <View
+                    key={candidate.barcode}
+                    className="flex-row items-center py-2.5 border-b border-neutral-100 last:border-b-0"
+                  >
+                    <View className="flex-1 pr-3">
+                      <Text className="text-body-sm font-semibold text-neutral-800">
+                        {candidate.productName}
+                      </Text>
+                      {candidate.brand && (
+                        <Text className="text-caption text-neutral-500">{candidate.brand}</Text>
+                      )}
+                    </View>
+                    <Badge
+                      label={`${candidate.score}`}
+                      variant={scoreLevelToBadgeVariant(candidate.scoreLevel)}
+                    />
+                  </View>
+                ))}
+              </>
+            )}
           </Card>
         )}
 
