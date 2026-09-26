@@ -1,6 +1,7 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  AppState,
   Linking,
   Pressable,
   Text,
@@ -31,7 +32,11 @@ const BARCODE_TYPES = ['ean13', 'ean8', 'upc_a', 'upc_e', 'code128'] as const;
 const ocrAvailable = isOcrAvailable();
 
 export function ScanScreen({ navigation }: MainTabScreenProps<'Scan'>) {
-  const [permission, requestPermission] = useCameraPermissions();
+  // The 3rd tuple element re-checks the OS permission status without prompting —
+  // used below to catch up after the user grants camera access from system
+  // Settings (via the "Open settings" button) and returns to the app, since the
+  // hook only checks once on mount and otherwise never notices the OS-level change.
+  const [permission, requestPermission, getPermission] = useCameraPermissions();
   // Which curated ingredient database this scan runs against. Orthogonal to `mode`
   // (camera/barcode/manual is *how* you get the text in; domain is *what kind* of
   // product it is) — not persisted, so it resets to Food each time the tab is opened.
@@ -51,6 +56,20 @@ export function ScanScreen({ navigation }: MainTabScreenProps<'Scan'>) {
   const healthProfileDraft = useAppStore((state) => state.healthProfileDraft);
   const settings = useAppStore((state) => state.settings);
   const setCameraPermissionGranted = useAppStore((state) => state.setCameraPermissionGranted);
+
+  // Re-check camera permission whenever the app comes back to the foreground — catches
+  // the case where the user tapped "Open settings" from the permission-blocked screen,
+  // granted camera access in Android's system Settings, and returned here. Without this,
+  // `permission` would keep showing the stale pre-Settings state until the app fully
+  // restarts, since `useCameraPermissions()` only checks once on mount.
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') {
+        getPermission().then((result) => setCameraPermissionGranted(result.granted));
+      }
+    });
+    return () => subscription.remove();
+  }, [getPermission, setCameraPermissionGranted]);
 
   const runAnalysis = (
     rawText: string,
