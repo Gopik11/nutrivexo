@@ -187,6 +187,12 @@ export async function lookupProductByBarcode(barcode: string): Promise<OffLookup
       }
     );
 
+    // Open Food Facts returns a plain HTTP 404 for a barcode that simply isn't in the
+    // database (not a service failure) — that's a legitimate "not found", not a network
+    // error. Any other non-2xx (5xx, etc.) is a genuine problem reaching the service.
+    if (response.status === 404) {
+      return { found: false };
+    }
     if (!response.ok) {
       return { found: false, networkError: true };
     }
@@ -205,9 +211,12 @@ export async function lookupProductByBarcode(barcode: string): Promise<OffLookup
       ingredientsText: (product.ingredients_text_en || product.ingredients_text)?.trim() || undefined,
       nutritionFacts: mapNutriments(product.nutriments),
     };
-  } catch {
+  } catch (error) {
     // Timeout (AbortError), offline, DNS failure, malformed JSON, etc — all surfaced the
-    // same way to the caller, which shows a "couldn't reach the database" message.
+    // same way to the caller, which shows a "couldn't reach the database" message. Logged
+    // (not just swallowed) so a genuine network problem is visible via `adb logcat` instead
+    // of only ever showing up as an unexplained user-facing error.
+    console.warn('[openFoodFacts] lookupProductByBarcode failed:', error);
     return { found: false, networkError: true };
   } finally {
     clearTimeout(timeout);

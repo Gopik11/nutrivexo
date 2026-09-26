@@ -52,6 +52,12 @@ export async function lookupCosmeticByBarcode(barcode: string): Promise<ObfLooku
       }
     );
 
+    // Same Product Opener API behavior as Open Food Facts: a barcode that isn't in the
+    // database returns a plain HTTP 404, not a service failure — treat that as a
+    // legitimate "not found" rather than a network error. Other non-2xx is a real problem.
+    if (response.status === 404) {
+      return { found: false };
+    }
     if (!response.ok) {
       return { found: false, networkError: true };
     }
@@ -69,8 +75,11 @@ export async function lookupCosmeticByBarcode(barcode: string): Promise<ObfLooku
       category: product.categories?.split(',')[0]?.trim() || undefined,
       ingredientsText: (product.ingredients_text_en || product.ingredients_text)?.trim() || undefined,
     };
-  } catch {
-    // Timeout (AbortError), offline, DNS failure, malformed JSON, etc.
+  } catch (error) {
+    // Timeout (AbortError), offline, DNS failure, malformed JSON, etc — logged so a genuine
+    // network problem is visible via `adb logcat` instead of only showing up as an
+    // unexplained user-facing error.
+    console.warn('[openBeautyFacts] lookupCosmeticByBarcode failed:', error);
     return { found: false, networkError: true };
   } finally {
     clearTimeout(timeout);
