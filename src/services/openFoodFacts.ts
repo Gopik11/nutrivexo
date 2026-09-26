@@ -1,6 +1,9 @@
 import type { NutritionFacts } from '../types';
 
-const REQUEST_TIMEOUT_MS = 8000;
+// Raised from 8s: on some networks/devices the public API can take longer than that to
+// respond, and a request that's still genuinely in flight was being aborted and reported
+// as "couldn't reach the database" before it ever got an answer.
+const REQUEST_TIMEOUT_MS = 15000;
 
 // Open Food Facts asks integrators to identify their app in the User-Agent so they can
 // reach out about API changes/abuse rather than silently rate-limiting us.

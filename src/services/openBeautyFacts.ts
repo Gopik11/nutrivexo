@@ -1,4 +1,5 @@
-const REQUEST_TIMEOUT_MS = 8000;
+// Kept in sync with openFoodFacts.ts's timeout — see the comment there.
+const REQUEST_TIMEOUT_MS = 15000;
 
 // Same courtesy header convention as the Open Food Facts client — Open Beauty
 // Facts is run by the same nonprofit (openfoodfacts.org) on the same
